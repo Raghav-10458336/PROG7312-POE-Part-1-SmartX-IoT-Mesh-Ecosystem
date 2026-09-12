@@ -1,3 +1,4 @@
+using SmartX.Api.Services;
 
 namespace SmartX.Api
 {
@@ -12,6 +13,8 @@ namespace SmartX.Api
             builder.Services.AddControllers();
             // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
             builder.Services.AddOpenApi();
+
+            builder.Services.AddSingleton<SensorRegistryService>();
 
             var app = builder.Build();
 
