@@ -15,6 +15,7 @@ namespace SmartX.Api
             builder.Services.AddOpenApi();
 
             builder.Services.AddSingleton<SensorRegistryService>();
+            builder.Services.AddSingleton<TelemetryIngestionService>();
 
             var app = builder.Build();
 
