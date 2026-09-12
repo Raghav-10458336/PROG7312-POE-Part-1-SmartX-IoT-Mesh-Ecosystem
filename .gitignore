@@ -427,3 +427,7 @@ FodyWeavers.xsd
 *.msix
 *.msm
 *.msp
+
+
+# Smart-X encrypted sensor attachments
+PROG7312.POE.Part1/SmartX.Api/EncryptedUploads/

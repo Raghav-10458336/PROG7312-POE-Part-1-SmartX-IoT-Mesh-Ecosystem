@@ -18,6 +18,7 @@ namespace SmartX.Api
             builder.Services.AddSingleton<TelemetryIngestionService>();
             builder.Services.AddSingleton<MockTelemetrySeeder>();
             builder.Services.AddSingleton<TelemetryAlertService>();
+            builder.Services.AddSingleton<AttachmentStorageService>();
 
             var app = builder.Build();
 
