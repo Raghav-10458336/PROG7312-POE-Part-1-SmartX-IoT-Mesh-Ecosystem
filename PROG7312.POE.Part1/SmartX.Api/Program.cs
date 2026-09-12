@@ -16,8 +16,17 @@ namespace SmartX.Api
 
             builder.Services.AddSingleton<SensorRegistryService>();
             builder.Services.AddSingleton<TelemetryIngestionService>();
+            builder.Services.AddSingleton<MockTelemetrySeeder>();
 
             var app = builder.Build();
+
+            using (IServiceScope scope = app.Services.CreateScope())
+            {
+                MockTelemetrySeeder seeder =
+                    scope.ServiceProvider.GetRequiredService<MockTelemetrySeeder>();
+
+                seeder.Seed();
+            }
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
