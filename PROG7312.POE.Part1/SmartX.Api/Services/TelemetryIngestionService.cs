@@ -8,14 +8,23 @@ namespace SmartX.Api.Services
         private readonly TelemetryBuffer<TelemetryPacket<int>> _integerTelemetry = new();
         private readonly TelemetryBuffer<TelemetryPacket<bool>> _booleanTelemetry = new();
 
+        private readonly TelemetryAlertService _alertService;
+
+        public TelemetryIngestionService(TelemetryAlertService alertService)
+        {
+            _alertService = alertService;
+        }
+
         public void IngestFloat(TelemetryPacket<float> packet)
         {
             _floatTelemetry.Add(packet);
+            _alertService.EvaluateFloat(packet);
         }
 
         public void IngestInteger(TelemetryPacket<int> packet)
         {
             _integerTelemetry.Add(packet);
+            _alertService.EvaluateInteger(packet);
         }
 
         public void IngestBoolean(TelemetryPacket<bool> packet)
