@@ -1,0 +1,543 @@
+﻿@page "/telemetry"
+@using System.Net.Http.Json
+@using SmartX.Shared.Telemetry
+@inject HttpClient Http
+
+<PageTitle>Smart-X | Telemetry</PageTitle>
+
+<div class="telemetry-page">
+
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+            <div class="brand-mark">SX</div>
+
+            <div>
+                <strong>Smart-X</strong>
+                <span>IoT Mesh</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <span class="nav-label">WORKSPACE</span>
+
+            <a class="nav-item" href="/dashboard">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </a>
+
+            <a class="nav-item" href="/sensors">
+                <span class="nav-icon">◉</span>
+                Sensors
+            </a>
+
+            <a class="nav-item active" href="/telemetry">
+                <span class="nav-icon">⌁</span>
+                Telemetry
+            </a>
+
+            <a class="nav-item" href="/alerts">
+                <span class="nav-icon">!</span>
+                Attention Centre
+            </a>
+
+            <span class="nav-label secondary-label">MANAGEMENT</span>
+
+            <a class="nav-item" href="/attachments">
+                <span class="nav-icon">□</span>
+                Attachments
+            </a>
+
+            <a class="nav-item" href="/deployment">
+                <span class="nav-icon">⌘</span>
+                Deployment Validation
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="sidebar-status">
+                <span class="status-dot"></span>
+                Gateway connected
+            </span>
+
+            <span>Part 1 Gateway</span>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <div>
+                <span class="page-eyebrow">
+                    TELEMETRY INGESTION
+                </span>
+
+                <h1>Telemetry Stream</h1>
+
+                <p>
+                    Inspect environmental, power and actuator readings
+                    received by the Smart-X gateway.
+                </p>
+            </div>
+
+            <a class="back-button" href="/dashboard">
+                ← Dashboard
+            </a>
+        </header>
+
+        @if (loading)
+        {
+            <div class="loading-panel">
+                Loading telemetry from the Smart-X gateway...
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="error-panel">
+                <strong>Telemetry unavailable</strong>
+                <span>@errorMessage</span>
+            </div>
+        }
+        else
+        {
+            <section class="summary-grid">
+
+                <div class="summary-card">
+                    <span>Total packets</span>
+                    <strong>@allTelemetry.Count.ToString("N0")</strong>
+                    <small>Current seeded workload</small>
+                </div>
+
+                <div class="summary-card environmental-card">
+                    <span>Environmental</span>
+                    <strong>@floatCount.ToString("N0")</strong>
+                    <small>Float telemetry packets</small>
+                </div>
+
+                <div class="summary-card power-card">
+                    <span>Power</span>
+                    <strong>@integerCount.ToString("N0")</strong>
+                    <small>Integer telemetry packets</small>
+                </div>
+
+                <div class="summary-card actuator-card">
+                    <span>Actuator</span>
+                    <strong>@booleanCount.ToString("N0")</strong>
+                    <small>Boolean telemetry packets</small>
+                </div>
+
+            </section>
+
+            <section class="telemetry-panel">
+
+                <div class="panel-heading">
+                    <div>
+                        <span class="panel-eyebrow">
+                            RECEIVED DATA
+                        </span>
+
+                        <h2>Telemetry readings</h2>
+
+                        <p>
+                            Filter the current gateway workload by device,
+                            metric or telemetry type.
+                        </p>
+                    </div>
+
+                    <div class="result-count">
+                        @FilteredTelemetry.Count().ToString("N0")
+                        <span>matching</span>
+                    </div>
+                </div>
+
+                <div class="filter-bar">
+
+                    <div class="search-field">
+                        <label>Search</label>
+
+                        <input type="text"
+                               placeholder="Device or metric..."
+                               @bind="searchText"
+                               @bind:event="oninput" />
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Telemetry type</label>
+
+                        <select @bind="selectedType">
+                            <option value="All">All types</option>
+                            <option value="Environmental">Environmental</option>
+                            <option value="Power">Power</option>
+                            <option value="Actuator">Actuator</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Metric</label>
+
+                        <select @bind="selectedMetric">
+                            <option value="All">All metrics</option>
+
+                            @foreach (string metric in metricNames)
+                            {
+                                <option value="@metric">
+                                    @metric
+                                </option>
+                            }
+                        </select>
+                    </div>
+
+                    <button class="clear-button"
+                            @onclick="ClearFilters">
+                        Clear filters
+                    </button>
+
+                </div>
+
+                <div class="table-note">
+                    Showing the latest
+                    <strong>100</strong>
+                    matching readings to keep the dashboard responsive.
+                </div>
+
+                @if (!FilteredTelemetry.Any())
+                {
+                    <div class="empty-state">
+                        No telemetry readings match the selected filters.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrapper">
+
+                        <table class="telemetry-table">
+
+                            <thead>
+                                <tr>
+                                    <th>Device</th>
+                                    <th>Type</th>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                    <th>Received</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (TelemetryDisplayRow row
+                                    in FilteredTelemetry.Take(100))
+                                {
+                                    <tr>
+
+                                        <td>
+                                            <div class="device-cell">
+
+                                                <div class="device-indicator @GetTypeClass(row.TelemetryType)">
+                                                    @GetTypeLetter(row.TelemetryType)
+                                                </div>
+
+                                                <div>
+                                                    <strong>
+                                                        @row.DeviceIdentifier
+                                                    </strong>
+
+                                                    <span>
+                                                        @row.SensorId.ToString()[..8]
+                                                    </span>
+                                                </div>
+
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <span class="type-badge @GetTypeClass(row.TelemetryType)">
+                                                @row.TelemetryType
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <strong class="metric-name">
+                                                @row.MetricName
+                                            </strong>
+                                        </td>
+
+                                        <td>
+                                            <span class="reading-value">
+                                                @row.DisplayValue
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            <div class="timestamp-cell">
+                                                <strong>
+                                                    @(row.TimestampUtc.ToLocalTime().ToString("HH:mm:ss"))
+                                                </strong>
+
+                                                <span>
+                                                    @(row.TimestampUtc.ToLocalTime().ToString("dd MMM yyyy"))
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+                }
+
+            </section>
+        }
+
+    </main>
+</div>
+
+@code {
+    private bool loading = true;
+
+    private string? errorMessage;
+
+    private string searchText = string.Empty;
+    private string selectedType = "All";
+    private string selectedMetric = "All";
+
+    private int floatCount;
+    private int integerCount;
+    private int booleanCount;
+
+    private List<TelemetryDisplayRow> allTelemetry = new();
+    private List<string> metricNames = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTelemetry();
+    }
+
+    private async Task LoadTelemetry()
+    {
+        loading = true;
+        errorMessage = null;
+
+        try
+        {
+            Task<List<TelemetryPacket<float>>?> floatTask =
+                Http.GetFromJsonAsync<List<TelemetryPacket<float>>>(
+                    "api/telemetry/float");
+
+            Task<List<TelemetryPacket<int>>?> integerTask =
+                Http.GetFromJsonAsync<List<TelemetryPacket<int>>>(
+                    "api/telemetry/integer");
+
+            Task<List<TelemetryPacket<bool>>?> booleanTask =
+                Http.GetFromJsonAsync<List<TelemetryPacket<bool>>>(
+                    "api/telemetry/boolean");
+
+            await Task.WhenAll(
+                floatTask,
+                integerTask,
+                booleanTask);
+
+            List<TelemetryPacket<float>> floatPackets =
+                floatTask.Result
+                ?? new List<TelemetryPacket<float>>();
+
+            List<TelemetryPacket<int>> integerPackets =
+                integerTask.Result
+                ?? new List<TelemetryPacket<int>>();
+
+            List<TelemetryPacket<bool>> booleanPackets =
+                booleanTask.Result
+                ?? new List<TelemetryPacket<bool>>();
+
+            floatCount = floatPackets.Count;
+            integerCount = integerPackets.Count;
+            booleanCount = booleanPackets.Count;
+
+            allTelemetry = new List<TelemetryDisplayRow>();
+
+            allTelemetry.AddRange(
+                floatPackets.Select(packet =>
+                    new TelemetryDisplayRow
+                    {
+                        SensorId = packet.SensorId,
+                        DeviceIdentifier = packet.DeviceIdentifier,
+                        TelemetryType = "Environmental",
+                        MetricName = packet.MetricName,
+                        DisplayValue =
+                            $"{packet.Value:F2} {packet.Unit}",
+                        TimestampUtc = packet.TimestampUtc
+                    }));
+
+            allTelemetry.AddRange(
+                integerPackets.Select(packet =>
+                    new TelemetryDisplayRow
+                    {
+                        SensorId = packet.SensorId,
+                        DeviceIdentifier = packet.DeviceIdentifier,
+                        TelemetryType = "Power",
+                        MetricName = packet.MetricName,
+                        DisplayValue =
+                            $"{packet.Value:N0} {packet.Unit}",
+                        TimestampUtc = packet.TimestampUtc
+                    }));
+
+            allTelemetry.AddRange(
+                booleanPackets.Select(packet =>
+                    new TelemetryDisplayRow
+                    {
+                        SensorId = packet.SensorId,
+                        DeviceIdentifier = packet.DeviceIdentifier,
+                        TelemetryType = "Actuator",
+                        MetricName = packet.MetricName,
+                        DisplayValue =
+                            FormatBooleanValue(
+                                packet.MetricName,
+                                packet.Value),
+                        TimestampUtc = packet.TimestampUtc
+                    }));
+
+            allTelemetry =
+                allTelemetry
+                    .OrderByDescending(packet => packet.TimestampUtc)
+                    .ToList();
+
+            metricNames =
+                allTelemetry
+                    .Select(packet => packet.MetricName)
+                    .Distinct()
+                    .OrderBy(metric => metric)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Unable to retrieve telemetry: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private IEnumerable<TelemetryDisplayRow> FilteredTelemetry
+    {
+        get
+        {
+            IEnumerable<TelemetryDisplayRow> query =
+                allTelemetry;
+
+            if (!string.Equals(
+                selectedType,
+                "All",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                query =
+                    query.Where(row =>
+                        row.TelemetryType.Equals(
+                            selectedType,
+                            StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.Equals(
+                selectedMetric,
+                "All",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                query =
+                    query.Where(row =>
+                        row.MetricName.Equals(
+                            selectedMetric,
+                            StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query =
+                    query.Where(row =>
+                        row.DeviceIdentifier.Contains(
+                            searchText,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        row.MetricName.Contains(
+                            searchText,
+                            StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query;
+        }
+    }
+
+    private void ClearFilters()
+    {
+        searchText = string.Empty;
+        selectedType = "All";
+        selectedMetric = "All";
+    }
+
+    private static string FormatBooleanValue(
+        string metricName,
+        bool value)
+    {
+        return metricName switch
+        {
+            "Valve State" =>
+                value ? "Open" : "Closed",
+
+            "Pump State" =>
+                value ? "Running" : "Stopped",
+
+            "Relay State" =>
+                value ? "Enabled" : "Disabled",
+
+            _ =>
+                value ? "True" : "False"
+        };
+    }
+
+    private static string GetTypeClass(
+        string telemetryType)
+    {
+        return telemetryType switch
+        {
+            "Environmental" => "environmental",
+            "Power" => "power",
+            "Actuator" => "actuator",
+
+            _ => string.Empty
+        };
+    }
+
+    private static string GetTypeLetter(
+        string telemetryType)
+    {
+        return telemetryType switch
+        {
+            "Environmental" => "E",
+            "Power" => "P",
+            "Actuator" => "A",
+
+            _ => "T"
+        };
+    }
+
+    private sealed class TelemetryDisplayRow
+    {
+        public Guid SensorId { get; set; }
+
+        public string DeviceIdentifier { get; set; } =
+            string.Empty;
+
+        public string TelemetryType { get; set; } =
+            string.Empty;
+
+        public string MetricName { get; set; } =
+            string.Empty;
+
+        public string DisplayValue { get; set; } =
+            string.Empty;
+
+        public DateTime TimestampUtc { get; set; }
+    }
+}
