@@ -1,0 +1,525 @@
+﻿@page "/deployment"
+
+@using System.Net.Http.Json
+@using SmartX.Shared.Models
+
+@inject HttpClient Http
+
+<PageTitle>Smart-X | Deployment Validation</PageTitle>
+
+<div class="deployment-page">
+
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+            <div class="brand-mark">SX</div>
+
+            <div>
+                <strong>Smart-X</strong>
+                <span>IoT Mesh</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <span class="nav-label">WORKSPACE</span>
+
+            <a class="nav-item" href="/dashboard">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </a>
+
+            <a class="nav-item" href="/sensors">
+                <span class="nav-icon">◉</span>
+                Sensors
+            </a>
+
+            <a class="nav-item" href="/telemetry">
+                <span class="nav-icon">⌁</span>
+                Telemetry
+            </a>
+
+            <a class="nav-item" href="/alerts">
+                <span class="nav-icon">!</span>
+                Attention Centre
+            </a>
+
+            <span class="nav-label secondary-label">
+                MANAGEMENT
+            </span>
+
+            <a class="nav-item" href="/attachments">
+                <span class="nav-icon">□</span>
+                Attachments
+            </a>
+
+            <a class="nav-item active" href="/deployment">
+                <span class="nav-icon">⌘</span>
+                Deployment Validation
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="sidebar-status">
+                <span class="status-dot"></span>
+                Gateway connected
+            </span>
+
+            <span>Part 1 Gateway</span>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+
+            <div>
+                <span class="page-eyebrow">
+                    DEPLOYMENT INTEGRITY
+                </span>
+
+                <h1>Deployment Validation</h1>
+
+                <p>
+                    Validate nested Smart-X deployment structures
+                    recursively from facility to sensor node.
+                </p>
+            </div>
+
+            <a class="back-button" href="/dashboard">
+                ← Dashboard
+            </a>
+
+        </header>
+
+        <section class="info-panel">
+
+            <div>
+                <span class="panel-eyebrow">
+                    RECURSIVE VALIDATION
+                </span>
+
+                <h2>Deployment hierarchy</h2>
+
+                <p>
+                    Every child node is validated recursively.
+                    If any nested node is incomplete or unconfigured,
+                    the complete deployment is marked invalid.
+                </p>
+            </div>
+
+            <div class="depth-indicator">
+                <strong>4</strong>
+                <span>hierarchy levels</span>
+            </div>
+
+        </section>
+
+        <section class="workspace-grid">
+
+            <div class="tree-panel">
+
+                <div class="panel-heading">
+                    <span class="panel-eyebrow">
+                        STRUCTURE
+                    </span>
+
+                    <h2>Deployment tree</h2>
+
+                    <p>
+                        Edit the names and configuration state
+                        of each nested deployment node.
+                    </p>
+                </div>
+
+                <div class="tree-body">
+
+                    <div class="tree-node level-one">
+
+                        <div class="node-line">
+                            <div class="node-marker">01</div>
+
+                            <div class="node-content">
+                                <span class="node-type">
+                                    FACILITY
+                                </span>
+
+                                <input type="text"
+                                       @bind="facilityName" />
+
+                                <label class="configuration-toggle">
+                                    <input type="checkbox"
+                                           @bind="facilityConfigured" />
+
+                                    <span>
+                                        Configured
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="tree-children">
+
+                            <div class="tree-node">
+
+                                <div class="node-line">
+                                    <div class="node-marker">02</div>
+
+                                    <div class="node-content">
+                                        <span class="node-type">
+                                            ZONE
+                                        </span>
+
+                                        <input type="text"
+                                               @bind="zoneName" />
+
+                                        <label class="configuration-toggle">
+                                            <input type="checkbox"
+                                                   @bind="zoneConfigured" />
+
+                                            <span>
+                                                Configured
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="tree-children">
+
+                                    <div class="tree-node">
+
+                                        <div class="node-line">
+                                            <div class="node-marker">03</div>
+
+                                            <div class="node-content">
+                                                <span class="node-type">
+                                                    CLUSTER
+                                                </span>
+
+                                                <input type="text"
+                                                       @bind="clusterName" />
+
+                                                <label class="configuration-toggle">
+                                                    <input type="checkbox"
+                                                           @bind="clusterConfigured" />
+
+                                                    <span>
+                                                        Configured
+                                                    </span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="tree-children">
+
+                                            <div class="tree-node leaf-node">
+
+                                                <div class="node-line">
+                                                    <div class="node-marker">
+                                                        04
+                                                    </div>
+
+                                                    <div class="node-content">
+                                                        <span class="node-type">
+                                                            SENSOR NODE
+                                                        </span>
+
+                                                        <input type="text"
+                                                               @bind="sensorNodeName" />
+
+                                                        <label class="configuration-toggle">
+                                                            <input type="checkbox"
+                                                                   @bind="sensorNodeConfigured" />
+
+                                                            <span>
+                                                                Configured
+                                                            </span>
+                                                        </label>
+                                                    </div>
+                                                </div>
+
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+            <div class="validation-panel">
+
+                <div class="panel-heading">
+                    <span class="panel-eyebrow">
+                        VALIDATION
+                    </span>
+
+                    <h2>Run integrity check</h2>
+
+                    <p>
+                        Submit the complete hierarchy to the Smart-X
+                        validation gateway.
+                    </p>
+                </div>
+
+                <div class="validation-body">
+
+                    <div class="validation-summary">
+
+                        <div class="summary-row">
+                            <span>Facility</span>
+                            <strong>
+                                @GetConfigurationStatus(
+                                    facilityConfigured)
+                            </strong>
+                        </div>
+
+                        <div class="summary-row">
+                            <span>Zone</span>
+                            <strong>
+                                @GetConfigurationStatus(
+                                    zoneConfigured)
+                            </strong>
+                        </div>
+
+                        <div class="summary-row">
+                            <span>Cluster</span>
+                            <strong>
+                                @GetConfigurationStatus(
+                                    clusterConfigured)
+                            </strong>
+                        </div>
+
+                        <div class="summary-row">
+                            <span>Sensor node</span>
+                            <strong>
+                                @GetConfigurationStatus(
+                                    sensorNodeConfigured)
+                            </strong>
+                        </div>
+
+                    </div>
+
+                    <button class="validate-button"
+                            disabled="@validating"
+                            @onclick="ValidateDeployment">
+
+                        @(validating
+                            ? "Validating hierarchy..."
+                            : "Validate deployment")
+
+                    </button>
+
+                    @if (validationResult is not null)
+                    {
+                        <div class="result-card @(validationResult.IsValid ? "valid-result" : "invalid-result")">
+
+                            <div class="result-icon">
+                                @(validationResult.IsValid ? "✓" : "!")
+                            </div>
+
+                            <div>
+                                <strong>
+                                    @(validationResult.IsValid
+                                        ? "Deployment valid"
+                                        : "Deployment invalid")
+                                </strong>
+
+                                <span>
+                                    @validationResult.Message
+                                </span>
+                            </div>
+
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(errorMessage))
+                    {
+                        <div class="error-message">
+                            @errorMessage
+                        </div>
+                    }
+
+                </div>
+
+            </div>
+
+        </section>
+
+        <section class="explanation-panel">
+
+            <span class="panel-eyebrow">
+                HOW VALIDATION WORKS
+            </span>
+
+            <h2>Recursive hierarchy traversal</h2>
+
+            <div class="explanation-grid">
+
+                <div>
+                    <strong>1. Root validation</strong>
+                    <span>
+                        The API begins with the top-level facility node.
+                    </span>
+                </div>
+
+                <div>
+                    <strong>2. Child traversal</strong>
+                    <span>
+                        Each child node is passed back into the same
+                        validation method.
+                    </span>
+                </div>
+
+                <div>
+                    <strong>3. Deep inspection</strong>
+                    <span>
+                        Validation continues through every nested level
+                        until the sensor node is reached.
+                    </span>
+                </div>
+
+                <div>
+                    <strong>4. Combined result</strong>
+                    <span>
+                        One invalid node causes the complete hierarchy
+                        to fail validation.
+                    </span>
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+</div>
+
+@code {
+    private string facilityName =
+        "Smart-X Facility A";
+
+    private string zoneName =
+        "Hydroponic Zone 1";
+
+    private string clusterName =
+        "Environmental Cluster A";
+
+    private string sensorNodeName =
+        "ESP32-ENV-01";
+
+    private bool facilityConfigured = true;
+    private bool zoneConfigured = true;
+    private bool clusterConfigured = true;
+    private bool sensorNodeConfigured = true;
+
+    private bool validating;
+
+    private string? errorMessage;
+
+    private DeploymentValidationResponse? validationResult;
+
+    private async Task ValidateDeployment()
+    {
+        validating = true;
+        errorMessage = null;
+        validationResult = null;
+
+        try
+        {
+            DeploymentNode deploymentTree =
+                BuildDeploymentTree();
+
+            HttpResponseMessage response =
+                await Http.PostAsJsonAsync(
+                    "api/deployment/validate",
+                    deploymentTree);
+
+            if (response.IsSuccessStatusCode)
+            {
+                validationResult =
+                    await response.Content
+                        .ReadFromJsonAsync<
+                            DeploymentValidationResponse>();
+            }
+            else
+            {
+                errorMessage =
+                    "The deployment validation request failed.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Unable to validate deployment: {ex.Message}";
+        }
+        finally
+        {
+            validating = false;
+        }
+    }
+
+    private DeploymentNode BuildDeploymentTree()
+    {
+        DeploymentNode sensorNode = new()
+        {
+            Name = sensorNodeName,
+            IsConfigured = sensorNodeConfigured
+        };
+
+        DeploymentNode clusterNode = new()
+        {
+            Name = clusterName,
+            IsConfigured = clusterConfigured,
+            Children = new List<DeploymentNode>
+            {
+                sensorNode
+            }
+        };
+
+        DeploymentNode zoneNode = new()
+        {
+            Name = zoneName,
+            IsConfigured = zoneConfigured,
+            Children = new List<DeploymentNode>
+            {
+                clusterNode
+            }
+        };
+
+        DeploymentNode facilityNode = new()
+        {
+            Name = facilityName,
+            IsConfigured = facilityConfigured,
+            Children = new List<DeploymentNode>
+            {
+                zoneNode
+            }
+        };
+
+        return facilityNode;
+    }
+
+    private static string GetConfigurationStatus(
+        bool configured)
+    {
+        return configured
+            ? "Configured"
+            : "Incomplete";
+    }
+
+    private class DeploymentValidationResponse
+    {
+        public bool IsValid { get; set; }
+
+        public string Message { get; set; } =
+            string.Empty;
+    }
+}
