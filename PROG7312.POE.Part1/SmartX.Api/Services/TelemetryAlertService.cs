@@ -10,7 +10,8 @@ namespace SmartX.Api.Services
         public IReadOnlyList<TelemetryAlert> GetAll()
         {
             return _alerts
-                .OrderByDescending(alert => alert.DetectedAtUtc)
+                .OrderByDescending(
+                    alert => alert.DetectedAtUtc)
                 .ToList()
                 .AsReadOnly();
         }
@@ -22,16 +23,20 @@ namespace SmartX.Api.Services
 
         public int GetUnacknowledgedCount()
         {
-            return _alerts.Count(alert => !alert.IsAcknowledged);
+            return _alerts.Count(
+                alert => !alert.IsAcknowledged);
         }
 
-        public TelemetryAlert? GetById(Guid alertId)
+        public TelemetryAlert? GetById(
+            Guid alertId)
         {
             return _alerts.FirstOrDefault(
-                alert => alert.AlertId == alertId);
+                alert =>
+                    alert.AlertId == alertId);
         }
 
-        public bool Acknowledge(Guid alertId)
+        public bool Acknowledge(
+            Guid alertId)
         {
             TelemetryAlert? alert =
                 GetById(alertId);
@@ -47,7 +52,9 @@ namespace SmartX.Api.Services
             }
 
             alert.IsAcknowledged = true;
-            alert.AcknowledgedAtUtc = DateTime.UtcNow;
+
+            alert.AcknowledgedAtUtc =
+                DateTime.UtcNow;
 
             return true;
         }
@@ -62,25 +69,30 @@ namespace SmartX.Api.Services
                     packet.DeviceIdentifier,
                     packet.MetricName,
                     "Critical",
-                    $"Soil moisture dropped to {packet.Value:F2}%.");
+                    $"Soil moisture dropped to " +
+                    $"{packet.Value:F2}%.");
             }
-            else if (packet.MetricName == "Temperature"
+            else if (
+                packet.MetricName == "Temperature"
                 && packet.Value > 38)
             {
                 AddAlert(
                     packet.DeviceIdentifier,
                     packet.MetricName,
                     "Critical",
-                    $"Temperature increased to {packet.Value:F2} °C.");
+                    $"Temperature increased to " +
+                    $"{packet.Value:F2} °C.");
             }
-            else if (packet.MetricName == "Humidity"
+            else if (
+                packet.MetricName == "Humidity"
                 && packet.Value < 25)
             {
                 AddAlert(
                     packet.DeviceIdentifier,
                     packet.MetricName,
                     "Warning",
-                    $"Humidity dropped to {packet.Value:F2}%.");
+                    $"Humidity dropped to " +
+                    $"{packet.Value:F2}%.");
             }
         }
 
@@ -94,26 +106,92 @@ namespace SmartX.Api.Services
                     packet.DeviceIdentifier,
                     packet.MetricName,
                     "Critical",
-                    $"Power draw increased to {packet.Value:N0} W.");
+                    $"Power draw increased to " +
+                    $"{packet.Value:N0} W.");
             }
-            else if (packet.MetricName == "Energy Usage"
+            else if (
+                packet.MetricName == "Energy Usage"
                 && packet.Value > 5500)
             {
                 AddAlert(
                     packet.DeviceIdentifier,
                     packet.MetricName,
                     "Warning",
-                    $"Energy usage increased to {packet.Value:N0} Wh.");
+                    $"Energy usage increased to " +
+                    $"{packet.Value:N0} Wh.");
             }
-            else if (packet.MetricName == "Flow Rate"
+            else if (
+                packet.MetricName == "Flow Rate"
                 && packet.Value > 350)
             {
                 AddAlert(
                     packet.DeviceIdentifier,
                     packet.MetricName,
                     "Warning",
-                    $"Flow rate increased to {packet.Value:N0} L/h.");
+                    $"Flow rate increased to " +
+                    $"{packet.Value:N0} L/h.");
             }
+        }
+
+        public void EvaluateDisconnect(
+            string deviceIdentifier,
+            string deploymentLocation,
+            DateTime? lastSeenUtc,
+            DateTime evaluationTimeUtc,
+            TimeSpan disconnectThreshold)
+        {
+            bool alreadyReported =
+                _alerts.Any(alert =>
+                    alert.DeviceIdentifier.Equals(
+                        deviceIdentifier,
+                        StringComparison.OrdinalIgnoreCase)
+                    &&
+                    alert.MetricName.Equals(
+                        "Sensor Connectivity",
+                        StringComparison.OrdinalIgnoreCase));
+
+            if (alreadyReported)
+            {
+                return;
+            }
+
+            if (!lastSeenUtc.HasValue)
+            {
+                AddAlert(
+                    deviceIdentifier,
+                    "Sensor Connectivity",
+                    "Critical",
+                    $"No telemetry has been received from " +
+                    $"{deviceIdentifier} at " +
+                    $"{deploymentLocation}.");
+
+                return;
+            }
+
+            TimeSpan timeSinceLastTelemetry =
+                evaluationTimeUtc -
+                lastSeenUtc.Value;
+
+            if (timeSinceLastTelemetry <=
+                disconnectThreshold)
+            {
+                return;
+            }
+
+            int staleMinutes =
+                Math.Max(
+                    1,
+                    (int)Math.Floor(
+                        timeSinceLastTelemetry.TotalMinutes));
+
+            AddAlert(
+                deviceIdentifier,
+                "Sensor Connectivity",
+                "Critical",
+                $"{deviceIdentifier} at " +
+                $"{deploymentLocation} has not reported " +
+                $"telemetry for approximately " +
+                $"{staleMinutes} minutes.");
         }
 
         private void AddAlert(
@@ -124,12 +202,23 @@ namespace SmartX.Api.Services
         {
             TelemetryAlert alert = new()
             {
-                DeviceIdentifier = deviceIdentifier,
-                MetricName = metricName,
-                Severity = severity,
-                Message = message,
-                DetectedAtUtc = DateTime.UtcNow,
-                IsAcknowledged = false
+                DeviceIdentifier =
+                    deviceIdentifier,
+
+                MetricName =
+                    metricName,
+
+                Severity =
+                    severity,
+
+                Message =
+                    message,
+
+                DetectedAtUtc =
+                    DateTime.UtcNow,
+
+                IsAcknowledged =
+                    false
             };
 
             _alerts.Add(alert);

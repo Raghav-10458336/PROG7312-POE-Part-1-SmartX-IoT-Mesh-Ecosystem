@@ -8,23 +8,33 @@ namespace SmartX.Api.Services
     {
         private readonly TelemetryIngestionService _telemetryService;
         private readonly SensorRegistryService _sensorRegistryService;
+        private readonly TelemetryAlertService _alertService;
+
         private readonly Random _random = new();
+
+        private static readonly TimeSpan DisconnectThreshold =
+            TimeSpan.FromMinutes(10);
 
         public MockTelemetrySeeder(
             TelemetryIngestionService telemetryService,
-            SensorRegistryService sensorRegistryService)
+            SensorRegistryService sensorRegistryService,
+            TelemetryAlertService alertService)
         {
             _telemetryService = telemetryService;
             _sensorRegistryService = sensorRegistryService;
+            _alertService = alertService;
         }
 
         public void Seed()
         {
-            Dictionary<string, SensorRegistration> sensors = SeedSensors();
+            Dictionary<string, SensorRegistration> sensors =
+                SeedSensors();
 
             SeedFloatTelemetry(sensors);
             SeedIntegerTelemetry(sensors);
             SeedBooleanTelemetry(sensors);
+
+            DetectDisconnectedSensors(sensors);
         }
 
         private Dictionary<string, SensorRegistration> SeedSensors()
@@ -54,9 +64,14 @@ namespace SmartX.Api.Services
                     Category = SensorCategory.Actuator
                 };
 
-                _sensorRegistryService.Register(environmentalSensor);
-                _sensorRegistryService.Register(powerSensor);
-                _sensorRegistryService.Register(actuatorSensor);
+                _sensorRegistryService.Register(
+                    environmentalSensor);
+
+                _sensorRegistryService.Register(
+                    powerSensor);
+
+                _sensorRegistryService.Register(
+                    actuatorSensor);
 
                 sensors[environmentalSensor.DeviceIdentifier] =
                     environmentalSensor;
@@ -91,7 +106,10 @@ namespace SmartX.Api.Services
             TelemetryPacket<float>[][] batches =
                 new TelemetryPacket<float>[8][];
 
-            for (int batchIndex = 0; batchIndex < batches.Length; batchIndex++)
+            for (
+                int batchIndex = 0;
+                batchIndex < batches.Length;
+                batchIndex++)
             {
                 int batchSize = 300;
 
@@ -114,18 +132,26 @@ namespace SmartX.Api.Services
                             metricNames[metricIndex],
                             i);
 
-                    batches[batchIndex][i] =
-                        new TelemetryPacket<float>(
+                    TelemetryPacket<float> packet =
+                        new(
                             sensorId,
                             deviceIdentifier,
                             metricNames[metricIndex],
                             units[metricIndex],
                             value);
+
+                    packet.TimestampUtc =
+                        GetSimulatedTimestamp(
+                            deviceIdentifier);
+
+                    batches[batchIndex][i] =
+                        packet;
                 }
             }
 
-            TelemetryBatch<TelemetryPacket<float>> telemetryBatch =
-                new(batches);
+            TelemetryBatch<TelemetryPacket<float>>
+                telemetryBatch =
+                    new(batches);
 
             foreach (
                 TelemetryPacket<float> packet
@@ -155,7 +181,10 @@ namespace SmartX.Api.Services
             TelemetryPacket<int>[][] batches =
                 new TelemetryPacket<int>[8][];
 
-            for (int batchIndex = 0; batchIndex < batches.Length; batchIndex++)
+            for (
+                int batchIndex = 0;
+                batchIndex < batches.Length;
+                batchIndex++)
             {
                 int batchSize = 250;
 
@@ -178,18 +207,26 @@ namespace SmartX.Api.Services
                             metricNames[metricIndex],
                             i);
 
-                    batches[batchIndex][i] =
-                        new TelemetryPacket<int>(
+                    TelemetryPacket<int> packet =
+                        new(
                             sensorId,
                             deviceIdentifier,
                             metricNames[metricIndex],
                             units[metricIndex],
                             value);
+
+                    packet.TimestampUtc =
+                        GetSimulatedTimestamp(
+                            deviceIdentifier);
+
+                    batches[batchIndex][i] =
+                        packet;
                 }
             }
 
-            TelemetryBatch<TelemetryPacket<int>> telemetryBatch =
-                new(batches);
+            TelemetryBatch<TelemetryPacket<int>>
+                telemetryBatch =
+                    new(batches);
 
             foreach (
                 TelemetryPacket<int> packet
@@ -219,7 +256,10 @@ namespace SmartX.Api.Services
             TelemetryPacket<bool>[][] batches =
                 new TelemetryPacket<bool>[8][];
 
-            for (int batchIndex = 0; batchIndex < batches.Length; batchIndex++)
+            for (
+                int batchIndex = 0;
+                batchIndex < batches.Length;
+                batchIndex++)
             {
                 int batchSize = 200;
 
@@ -240,24 +280,134 @@ namespace SmartX.Api.Services
                     bool value =
                         _random.Next(0, 2) == 1;
 
-                    batches[batchIndex][i] =
-                        new TelemetryPacket<bool>(
+                    TelemetryPacket<bool> packet =
+                        new(
                             sensorId,
                             deviceIdentifier,
                             metricNames[metricIndex],
                             units[metricIndex],
                             value);
+
+                    packet.TimestampUtc =
+                        GetSimulatedTimestamp(
+                            deviceIdentifier);
+
+                    batches[batchIndex][i] =
+                        packet;
                 }
             }
 
-            TelemetryBatch<TelemetryPacket<bool>> telemetryBatch =
-                new(batches);
+            TelemetryBatch<TelemetryPacket<bool>>
+                telemetryBatch =
+                    new(batches);
 
             foreach (
                 TelemetryPacket<bool> packet
                 in telemetryBatch.ToList())
             {
                 _telemetryService.IngestBoolean(packet);
+            }
+        }
+
+        private DateTime GetSimulatedTimestamp(
+            string deviceIdentifier)
+        {
+            return deviceIdentifier switch
+            {
+                "ESP32-ENV-08" =>
+                    DateTime.UtcNow.AddMinutes(-35),
+
+                "ESP32-PWR-07" =>
+                    DateTime.UtcNow.AddMinutes(-27),
+
+                "ESP32-ACT-06" =>
+                    DateTime.UtcNow.AddMinutes(-22),
+
+                _ =>
+                    DateTime.UtcNow
+            };
+        }
+
+        private void DetectDisconnectedSensors(
+            Dictionary<string, SensorRegistration> sensors)
+        {
+            Dictionary<string, DateTime> latestTelemetry =
+                new(
+                    StringComparer.OrdinalIgnoreCase);
+
+            foreach (
+                TelemetryPacket<float> packet
+                in _telemetryService.GetFloatTelemetry())
+            {
+                RecordLatestTimestamp(
+                    latestTelemetry,
+                    packet.DeviceIdentifier,
+                    packet.TimestampUtc);
+            }
+
+            foreach (
+                TelemetryPacket<int> packet
+                in _telemetryService.GetIntegerTelemetry())
+            {
+                RecordLatestTimestamp(
+                    latestTelemetry,
+                    packet.DeviceIdentifier,
+                    packet.TimestampUtc);
+            }
+
+            foreach (
+                TelemetryPacket<bool> packet
+                in _telemetryService.GetBooleanTelemetry())
+            {
+                RecordLatestTimestamp(
+                    latestTelemetry,
+                    packet.DeviceIdentifier,
+                    packet.TimestampUtc);
+            }
+
+            DateTime evaluationTimeUtc =
+                DateTime.UtcNow;
+
+            foreach (
+                SensorRegistration sensor
+                in sensors.Values)
+            {
+                if (!latestTelemetry.TryGetValue(
+                    sensor.DeviceIdentifier,
+                    out DateTime lastSeenUtc))
+                {
+                    _alertService.EvaluateDisconnect(
+                        sensor.DeviceIdentifier,
+                        sensor.DeploymentLocation,
+                        null,
+                        evaluationTimeUtc,
+                        DisconnectThreshold);
+
+                    continue;
+                }
+
+                _alertService.EvaluateDisconnect(
+                    sensor.DeviceIdentifier,
+                    sensor.DeploymentLocation,
+                    lastSeenUtc,
+                    evaluationTimeUtc,
+                    DisconnectThreshold);
+            }
+        }
+
+        private static void RecordLatestTimestamp(
+            Dictionary<string, DateTime> latestTelemetry,
+            string deviceIdentifier,
+            DateTime timestampUtc)
+        {
+            if (!latestTelemetry.TryGetValue(
+                deviceIdentifier,
+                out DateTime existingTimestamp)
+                ||
+                timestampUtc > existingTimestamp)
+            {
+                latestTelemetry[deviceIdentifier] =
+                    timestampUtc;
             }
         }
 
@@ -270,17 +420,20 @@ namespace SmartX.Api.Services
                 "Soil Moisture" =>
                     index % 90 == 0
                         ? _random.Next(5, 15)
-                        : (float)(_random.NextDouble() * 30 + 45),
+                        : (float)(
+                            _random.NextDouble() * 30 + 45),
 
                 "Temperature" =>
                     index % 110 == 0
                         ? _random.Next(40, 50)
-                        : (float)(_random.NextDouble() * 12 + 18),
+                        : (float)(
+                            _random.NextDouble() * 12 + 18),
 
                 "Humidity" =>
                     index % 100 == 0
                         ? _random.Next(10, 20)
-                        : (float)(_random.NextDouble() * 35 + 45),
+                        : (float)(
+                            _random.NextDouble() * 35 + 45),
 
                 _ => 0
             };
