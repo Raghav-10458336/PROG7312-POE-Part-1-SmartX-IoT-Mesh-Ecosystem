@@ -217,15 +217,35 @@
     border-top: 3px solid #56839b;
 }
 
-/* -------------------- INGESTION -------------------- */
-
-.ingestion-panel {
+.ingestion-panel,
+.power-analysis-panel,
+.telemetry-panel {
     margin-top: 18px;
     background: white;
     border: 1px solid #dce1e5;
     border-radius: 10px;
     overflow: hidden;
 }
+
+.panel-heading {
+    padding: 22px 24px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 20px;
+    border-bottom: 1px solid #edf0f2;
+}
+
+    .panel-heading h2 {
+        margin: 5px 0 5px;
+        font-size: 18px;
+    }
+
+    .panel-heading p {
+        margin: 0;
+        color: #818a93;
+        font-size: 10px;
+    }
 
 .receiver-status {
     flex: 0 0 auto;
@@ -309,7 +329,8 @@
     align-items: flex-end;
 }
 
-.submit-reading-button {
+.submit-reading-button,
+.analyse-power-button {
     box-sizing: border-box;
     height: 38px;
     padding: 0 16px;
@@ -324,11 +345,13 @@
     white-space: nowrap;
 }
 
-    .submit-reading-button:hover {
+    .submit-reading-button:hover,
+    .analyse-power-button:hover {
         background: #0d6870;
     }
 
-    .submit-reading-button:disabled {
+    .submit-reading-button:disabled,
+    .analyse-power-button:disabled {
         opacity: 0.55;
         cursor: default;
     }
@@ -370,34 +393,156 @@
     color: #a3443e;
 }
 
-/* -------------------- RECEIVED DATA -------------------- */
+/* Power analysis */
 
-.telemetry-panel {
-    margin-top: 18px;
-    background: white;
-    border: 1px solid #dce1e5;
-    border-radius: 10px;
-    overflow: hidden;
+.operator-badge {
+    flex: 0 0 auto;
+    min-width: 125px;
+    padding: 9px 12px;
+    border-radius: 7px;
+    background: #fff4df;
+    text-align: center;
 }
 
-.panel-heading {
-    padding: 22px 24px;
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 20px;
-    border-bottom: 1px solid #edf0f2;
-}
-
-    .panel-heading h2 {
-        margin: 5px 0 5px;
-        font-size: 18px;
+    .operator-badge strong,
+    .operator-badge span {
+        display: block;
     }
 
-    .panel-heading p {
-        margin: 0;
-        color: #818a93;
+    .operator-badge strong {
+        color: #8a651e;
+        font-size: 13px;
+    }
+
+    .operator-badge span {
+        margin-top: 3px;
+        color: #aa8b51;
+        font-size: 7px;
+    }
+
+.power-analysis-body {
+    padding: 22px 24px;
+}
+
+.power-inputs {
+    display: grid;
+    grid-template-columns: minmax(180px, 1fr) minmax(180px, 1fr) max-content;
+    gap: 14px;
+    align-items: end;
+}
+
+.power-input-field label {
+    display: block;
+    margin-bottom: 6px;
+    color: #66717a;
+    font-size: 9px;
+    font-weight: 700;
+}
+
+.power-input-control {
+    display: flex;
+}
+
+    .power-input-control input {
+        box-sizing: border-box;
+        width: 100%;
+        min-width: 0;
+        height: 38px;
+        padding: 8px 10px;
+        border: 1px solid #d4dade;
+        border-right: 0;
+        border-radius: 6px 0 0 6px;
+        background: white;
+        color: #17212b;
+        font-family: inherit;
         font-size: 10px;
+        outline: none;
+    }
+
+        .power-input-control input:focus {
+            border-color: #6da5aa;
+        }
+
+    .power-input-control span {
+        width: 42px;
+        height: 38px;
+        border: 1px solid #d4dade;
+        border-radius: 0 6px 6px 0;
+        background: #f5f7f8;
+        color: #7f8991;
+        display: grid;
+        place-items: center;
+        font-size: 9px;
+        font-weight: 700;
+    }
+
+.power-results {
+    margin-top: 18px;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.power-result-card {
+    padding: 14px;
+    border: 1px solid #e0e5e8;
+    border-radius: 7px;
+    background: #fafbfb;
+}
+
+    .power-result-card span,
+    .power-result-card strong,
+    .power-result-card small {
+        display: block;
+    }
+
+    .power-result-card span {
+        color: #858f97;
+        font-size: 8px;
+        font-weight: 700;
+    }
+
+    .power-result-card strong {
+        margin-top: 7px;
+        color: #25313a;
+        font-size: 15px;
+    }
+
+    .power-result-card small {
+        margin-top: 4px;
+        color: #a0a7ad;
+        font-size: 7px;
+    }
+
+.combined-result {
+    border-top: 3px solid #c59639;
+}
+
+.highest-result {
+    border-top: 3px solid #0f7781;
+}
+
+.power-error {
+    margin-top: 16px;
+    padding: 10px 12px;
+    border: 1px solid #f0d0cc;
+    border-radius: 6px;
+    background: #fff0ee;
+    color: #a3443e;
+    font-size: 9px;
+}
+
+.operator-note {
+    margin-top: 16px;
+    padding-top: 13px;
+    border-top: 1px solid #edf0f2;
+    color: #8a939b;
+    font-size: 8px;
+    line-height: 1.5;
+}
+
+    .operator-note strong {
+        color: #5e6870;
     }
 
 .result-count {
@@ -650,8 +795,6 @@
         margin-top: 5px;
     }
 
-/* -------------------- RESPONSIVE -------------------- */
-
 @media (max-width: 1250px) {
     .ingestion-form {
         grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -659,6 +802,10 @@
 
     .submit-reading-button {
         width: 100%;
+    }
+
+    .power-results {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 }
 
@@ -678,6 +825,18 @@
 
 @media (max-width: 850px) {
     .ingestion-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .power-inputs {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .analyse-power-button {
+        width: 100%;
+    }
+
+    .power-results {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
@@ -702,7 +861,9 @@
 
     .summary-grid,
     .filter-bar,
-    .ingestion-form {
+    .ingestion-form,
+    .power-inputs,
+    .power-results {
         grid-template-columns: 1fr;
     }
 
@@ -714,7 +875,8 @@
         align-self: flex-start;
     }
 
-    .receiver-status {
+    .receiver-status,
+    .operator-badge {
         align-self: flex-start;
     }
 }

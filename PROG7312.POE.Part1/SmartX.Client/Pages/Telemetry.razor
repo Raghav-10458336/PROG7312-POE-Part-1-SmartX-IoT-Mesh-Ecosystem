@@ -1,5 +1,6 @@
 ﻿@page "/telemetry"
 
+@using System.Globalization
 @using System.Net.Http.Json
 @using SmartX.Shared.Enums
 @using SmartX.Shared.Models
@@ -262,14 +263,9 @@
                                 disabled="@submittingReading"
                                 @onclick="SubmitTelemetry">
 
-                            @if (submittingReading)
-                            {
-                                <span>Submitting...</span>
-                            }
-                            else
-                            {
-                                <span>Submit reading</span>
-                            }
+                            @(submittingReading
+                                ? "Submitting..."
+                                : "Submit reading")
 
                         </button>
                     </div>
@@ -291,6 +287,153 @@
                         <span>@submissionError</span>
                     </div>
                 }
+
+            </section>
+
+            <section class="power-analysis-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+                        <span class="panel-eyebrow">
+                            POWER LOAD ANALYSIS
+                        </span>
+
+                        <h2>Compare power meters</h2>
+
+                        <p>
+                            Analyse two power readings using Smart-X
+                            overloaded power operators.
+                        </p>
+                    </div>
+
+                    <div class="operator-badge">
+                        <strong>+ &nbsp; − &nbsp; &gt;</strong>
+                        <span>Operator processing</span>
+                    </div>
+
+                </div>
+
+                <div class="power-analysis-body">
+
+                    <div class="power-inputs">
+
+                        <div class="power-input-field">
+                            <label>Meter A</label>
+
+                            <div class="power-input-control">
+                                <input type="number"
+                                       step="any"
+                                       @bind="meterAInput"
+                                       placeholder="e.g. 1800" />
+
+                                <span>W</span>
+                            </div>
+                        </div>
+
+                        <div class="power-input-field">
+                            <label>Meter B</label>
+
+                            <div class="power-input-control">
+                                <input type="number"
+                                       step="any"
+                                       @bind="meterBInput"
+                                       placeholder="e.g. 1250" />
+
+                                <span>W</span>
+                            </div>
+                        </div>
+
+                        <button class="analyse-power-button"
+                                disabled="@analysingPower"
+                                @onclick="AnalysePower">
+
+                            @(analysingPower
+                                ? "Analysing..."
+                                : "Analyse load")
+
+                        </button>
+
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(powerAnalysisError))
+                    {
+                        <div class="power-error">
+                            @powerAnalysisError
+                        </div>
+                    }
+
+                    @if (powerAnalysisResult is not null)
+                    {
+                        <div class="power-results">
+
+                            <div class="power-result-card">
+                                <span>Meter A</span>
+
+                                <strong>
+                                    @powerAnalysisResult.MeterA.ToString("N0") W
+                                </strong>
+
+                                <small>Input reading</small>
+                            </div>
+
+                            <div class="power-result-card">
+                                <span>Meter B</span>
+
+                                <strong>
+                                    @powerAnalysisResult.MeterB.ToString("N0") W
+                                </strong>
+
+                                <small>Input reading</small>
+                            </div>
+
+                            <div class="power-result-card combined-result">
+                                <span>Combined load</span>
+
+                                <strong>
+                                    @powerAnalysisResult.CombinedLoad.ToString("N0") W
+                                </strong>
+
+                                <small>
+                                    Meter A + Meter B
+                                </small>
+                            </div>
+
+                            <div class="power-result-card">
+                                <span>Load difference</span>
+
+                                <strong>
+                                    @powerAnalysisResult.LoadDifference.ToString("N0") W
+                                </strong>
+
+                                <small>
+                                    Absolute meter difference
+                                </small>
+                            </div>
+
+                            <div class="power-result-card highest-result">
+                                <span>Highest load</span>
+
+                                <strong>
+                                    @powerAnalysisResult.HighestLoadMeter
+                                </strong>
+
+                                <small>
+                                    Determined using comparison
+                                </small>
+                            </div>
+
+                        </div>
+                    }
+
+                    <div class="operator-note">
+                        The API creates
+                        <strong>PowerReading</strong>
+                        objects and evaluates the readings using overloaded
+                        addition, subtraction and comparison operators.
+                    </div>
+
+                </div>
 
             </section>
 
@@ -331,21 +474,10 @@
                         <label>Telemetry type</label>
 
                         <select @bind="selectedType">
-                            <option value="All">
-                                All types
-                            </option>
-
-                            <option value="Environmental">
-                                Environmental
-                            </option>
-
-                            <option value="Power">
-                                Power
-                            </option>
-
-                            <option value="Actuator">
-                                Actuator
-                            </option>
+                            <option value="All">All types</option>
+                            <option value="Environmental">Environmental</option>
+                            <option value="Power">Power</option>
+                            <option value="Actuator">Actuator</option>
                         </select>
                     </div>
 
@@ -353,9 +485,7 @@
                         <label>Metric</label>
 
                         <select @bind="selectedMetric">
-                            <option value="All">
-                                All metrics
-                            </option>
+                            <option value="All">All metrics</option>
 
                             @foreach (string metric in metricNames)
                             {
@@ -496,21 +626,25 @@
     private List<SensorRegistration> sensors = new();
 
     private string submissionSensorId = string.Empty;
-
     private string submissionType = "Float";
-
     private string submissionMetric = "Soil Moisture";
-
     private string submissionUnit = "%";
-
     private double? submissionNumericValue;
-
     private string submissionBooleanValue = "true";
 
     private bool submittingReading;
 
     private string? submissionSuccess;
     private string? submissionError;
+
+    private double? meterAInput;
+    private double? meterBInput;
+
+    private bool analysingPower;
+
+    private string? powerAnalysisError;
+
+    private PowerAnalysisResult? powerAnalysisResult;
 
     protected override async Task OnInitializedAsync()
     {
@@ -584,71 +718,41 @@
                 floatPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId =
-                            packet.SensorId,
-
-                        DeviceIdentifier =
-                            packet.DeviceIdentifier,
-
-                        TelemetryType =
-                            "Environmental",
-
-                        MetricName =
-                            packet.MetricName,
-
+                        SensorId = packet.SensorId,
+                        DeviceIdentifier = packet.DeviceIdentifier,
+                        TelemetryType = "Environmental",
+                        MetricName = packet.MetricName,
                         DisplayValue =
                             $"{packet.Value:F2} {packet.Unit}",
-
-                        TimestampUtc =
-                            packet.TimestampUtc
+                        TimestampUtc = packet.TimestampUtc
                     }));
 
             allTelemetry.AddRange(
                 integerPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId =
-                            packet.SensorId,
-
-                        DeviceIdentifier =
-                            packet.DeviceIdentifier,
-
-                        TelemetryType =
-                            "Power",
-
-                        MetricName =
-                            packet.MetricName,
-
+                        SensorId = packet.SensorId,
+                        DeviceIdentifier = packet.DeviceIdentifier,
+                        TelemetryType = "Power",
+                        MetricName = packet.MetricName,
                         DisplayValue =
                             $"{packet.Value:N0} {packet.Unit}",
-
-                        TimestampUtc =
-                            packet.TimestampUtc
+                        TimestampUtc = packet.TimestampUtc
                     }));
 
             allTelemetry.AddRange(
                 booleanPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId =
-                            packet.SensorId,
-
-                        DeviceIdentifier =
-                            packet.DeviceIdentifier,
-
-                        TelemetryType =
-                            "Actuator",
-
-                        MetricName =
-                            packet.MetricName,
-
+                        SensorId = packet.SensorId,
+                        DeviceIdentifier = packet.DeviceIdentifier,
+                        TelemetryType = "Actuator",
+                        MetricName = packet.MetricName,
                         DisplayValue =
                             FormatBooleanValue(
                                 packet.MetricName,
                                 packet.Value),
-
-                        TimestampUtc =
-                            packet.TimestampUtc
+                        TimestampUtc = packet.TimestampUtc
                     }));
 
             allTelemetry =
@@ -813,11 +917,8 @@
                 _ => string.Empty
             };
 
-        submissionSuccess =
-            null;
-
-        submissionError =
-            null;
+        submissionSuccess = null;
+        submissionError = null;
     }
 
     private async Task SubmitTelemetry()
@@ -989,6 +1090,63 @@
         finally
         {
             submittingReading = false;
+        }
+    }
+
+    private async Task AnalysePower()
+    {
+        powerAnalysisError = null;
+        powerAnalysisResult = null;
+
+        if (!meterAInput.HasValue ||
+            !meterBInput.HasValue)
+        {
+            powerAnalysisError =
+                "Enter readings for both Meter A and Meter B.";
+
+            return;
+        }
+
+        if (meterAInput.Value < 0 ||
+            meterBInput.Value < 0)
+        {
+            powerAnalysisError =
+                "Power readings cannot be negative.";
+
+            return;
+        }
+
+        analysingPower = true;
+
+        try
+        {
+            string meterA =
+                meterAInput.Value.ToString(
+                    CultureInfo.InvariantCulture);
+
+            string meterB =
+                meterBInput.Value.ToString(
+                    CultureInfo.InvariantCulture);
+
+            powerAnalysisResult =
+                await Http.GetFromJsonAsync<
+                    PowerAnalysisResult>(
+                    $"api/power-analysis?meterA={meterA}&meterB={meterB}");
+
+            if (powerAnalysisResult is null)
+            {
+                powerAnalysisError =
+                    "The Smart-X gateway returned no analysis result.";
+            }
+        }
+        catch (Exception ex)
+        {
+            powerAnalysisError =
+                $"Power analysis failed: {ex.Message}";
+        }
+        finally
+        {
+            analysingPower = false;
         }
     }
 
