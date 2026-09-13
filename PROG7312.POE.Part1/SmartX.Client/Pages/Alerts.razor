@@ -1,0 +1,534 @@
+﻿@page "/alerts"
+@using System.Net.Http.Json
+@using SmartX.Shared.Models
+@inject HttpClient Http
+
+<PageTitle>Smart-X | Attention Centre</PageTitle>
+
+<div class="alerts-page">
+
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+            <div class="brand-mark">SX</div>
+
+            <div>
+                <strong>Smart-X</strong>
+                <span>IoT Mesh</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <span class="nav-label">WORKSPACE</span>
+
+            <a class="nav-item" href="/dashboard">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </a>
+
+            <a class="nav-item" href="/sensors">
+                <span class="nav-icon">◉</span>
+                Sensors
+            </a>
+
+            <a class="nav-item" href="/telemetry">
+                <span class="nav-icon">⌁</span>
+                Telemetry
+            </a>
+
+            <a class="nav-item active" href="/alerts">
+                <span class="nav-icon">!</span>
+                Attention Centre
+
+                @if (unacknowledgedCount > 0)
+                {
+                    <span class="nav-count">
+                        @unacknowledgedCount
+                    </span>
+                }
+            </a>
+
+            <span class="nav-label secondary-label">MANAGEMENT</span>
+
+            <a class="nav-item" href="/attachments">
+                <span class="nav-icon">□</span>
+                Attachments
+            </a>
+
+            <a class="nav-item" href="/deployment">
+                <span class="nav-icon">⌘</span>
+                Deployment Validation
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="sidebar-status">
+                <span class="status-dot"></span>
+                Gateway connected
+            </span>
+
+            <span>Part 1 Gateway</span>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <div>
+                <span class="page-eyebrow">
+                    OPERATOR ATTENTION
+                </span>
+
+                <h1>Attention Centre</h1>
+
+                <p>
+                    Review anomalous telemetry and acknowledge issues
+                    requiring operator attention.
+                </p>
+            </div>
+
+            <a class="back-button" href="/dashboard">
+                ← Dashboard
+            </a>
+        </header>
+
+        @if (loading)
+        {
+            <div class="loading-panel">
+                Loading Smart-X alerts...
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="error-panel">
+                <strong>Unable to load alerts</strong>
+                <span>@errorMessage</span>
+            </div>
+        }
+        else
+        {
+            <section class="summary-grid">
+
+                <div class="summary-card">
+                    <span>Total alerts</span>
+                    <strong>@alerts.Count</strong>
+                    <small>Detected anomalies</small>
+                </div>
+
+                <div class="summary-card attention-card">
+                    <span>Attention required</span>
+                    <strong>@unacknowledgedCount</strong>
+                    <small>Awaiting acknowledgement</small>
+                </div>
+
+                <div class="summary-card critical-card">
+                    <span>Critical</span>
+                    <strong>@criticalCount</strong>
+                    <small>High-priority anomalies</small>
+                </div>
+
+                <div class="summary-card warning-card">
+                    <span>Warnings</span>
+                    <strong>@warningCount</strong>
+                    <small>Operational warnings</small>
+                </div>
+
+            </section>
+
+            <section class="alerts-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+                        <span class="panel-eyebrow">
+                            ANOMALY QUEUE
+                        </span>
+
+                        <h2>Telemetry alerts</h2>
+
+                        <p>
+                            Prioritise unresolved anomalies and acknowledge
+                            them once reviewed.
+                        </p>
+                    </div>
+
+                    <div class="result-count">
+                        @FilteredAlerts.Count()
+                        <span>matching</span>
+                    </div>
+
+                </div>
+
+                <div class="filter-bar">
+
+                    <div class="search-field">
+                        <label>Search</label>
+
+                        <input type="text"
+                               placeholder="Device, metric or message..."
+                               @bind="searchText"
+                               @bind:event="oninput" />
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Status</label>
+
+                        <select @bind="selectedStatus">
+                            <option value="Unacknowledged">
+                                Needs attention
+                            </option>
+
+                            <option value="All">
+                                All alerts
+                            </option>
+
+                            <option value="Acknowledged">
+                                Acknowledged
+                            </option>
+                        </select>
+                    </div>
+
+                    <div class="filter-field">
+                        <label>Severity</label>
+
+                        <select @bind="selectedSeverity">
+                            <option value="All">
+                                All severities
+                            </option>
+
+                            <option value="Critical">
+                                Critical
+                            </option>
+
+                            <option value="Warning">
+                                Warning
+                            </option>
+                        </select>
+                    </div>
+
+                    <button class="clear-button"
+                            @onclick="ClearFilters">
+                        Clear filters
+                    </button>
+
+                </div>
+
+                @if (!FilteredAlerts.Any())
+                {
+                    <div class="empty-state">
+                        No alerts match the selected filters.
+                    </div>
+                }
+                else
+                {
+                    <div class="alert-list">
+
+                        @foreach (TelemetryAlert alert
+                            in FilteredAlerts.Take(100))
+                        {
+                            <article class="alert-card @(alert.IsAcknowledged ? "acknowledged-alert" : "")">
+
+                                <div class="severity-strip @GetSeverityClass(alert.Severity)">
+                                </div>
+
+                                <div class="alert-content">
+
+                                    <div class="alert-top-row">
+
+                                        <div class="alert-title-area">
+
+                                            <div class="alert-badges">
+
+                                                <span class="severity-badge @GetSeverityClass(alert.Severity)">
+                                                    @alert.Severity
+                                                </span>
+
+                                                @if (alert.IsAcknowledged)
+                                                {
+                                                    <span class="acknowledged-badge">
+                                                        Acknowledged
+                                                    </span>
+                                                }
+                                                else
+                                                {
+                                                    <span class="attention-badge">
+                                                        Needs attention
+                                                    </span>
+                                                }
+
+                                            </div>
+
+                                            <h3>
+                                                @alert.MetricName
+                                            </h3>
+
+                                            <p>
+                                                @alert.Message
+                                            </p>
+
+                                        </div>
+
+                                        <div class="alert-time">
+
+                                            <strong>
+                                                @(alert.DetectedAtUtc
+                                                    .ToLocalTime()
+                                                    .ToString("HH:mm:ss"))
+                                            </strong>
+
+                                            <span>
+                                                @(alert.DetectedAtUtc
+                                                    .ToLocalTime()
+                                                    .ToString("dd MMM yyyy"))
+                                            </span>
+
+                                        </div>
+
+                                    </div>
+
+                                    <div class="alert-bottom-row">
+
+                                        <div class="device-info">
+
+                                            <span class="device-label">
+                                                DEVICE
+                                            </span>
+
+                                            <strong>
+                                                @alert.DeviceIdentifier
+                                            </strong>
+
+                                        </div>
+
+                                        @if (alert.IsAcknowledged)
+                                        {
+                                            <div class="acknowledged-info">
+
+                                                <span>
+                                                    Reviewed
+                                                </span>
+
+                                                @if (alert.AcknowledgedAtUtc.HasValue)
+                                                {
+                                                    <strong>
+                                                        @(alert.AcknowledgedAtUtc.Value
+                                                            .ToLocalTime()
+                                                            .ToString("dd MMM yyyy HH:mm"))
+                                                    </strong>
+                                                }
+
+                                            </div>
+                                        }
+                                        else
+                                        {
+                                            <button class="acknowledge-button"
+                                                    disabled="@IsAcknowledging(alert.AlertId)"
+                                                    @onclick="() => AcknowledgeAlert(alert)">
+
+                                                @(IsAcknowledging(alert.AlertId)
+                                                    ? "Acknowledging..."
+                                                    : "Acknowledge")
+
+                                            </button>
+                                        }
+
+                                    </div>
+
+                                </div>
+
+                            </article>
+                        }
+
+                    </div>
+                }
+
+            </section>
+        }
+
+    </main>
+
+</div>
+
+@code {
+    private bool loading = true;
+
+    private string? errorMessage;
+
+    private string searchText = string.Empty;
+    private string selectedStatus = "Unacknowledged";
+    private string selectedSeverity = "All";
+
+    private List<TelemetryAlert> alerts = new();
+
+    private Guid? acknowledgingAlertId;
+
+    private int unacknowledgedCount;
+    private int criticalCount;
+    private int warningCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAlerts();
+    }
+
+    private async Task LoadAlerts()
+    {
+        loading = true;
+        errorMessage = null;
+
+        try
+        {
+            List<TelemetryAlert>? response =
+                await Http.GetFromJsonAsync<List<TelemetryAlert>>(
+                    "api/alerts");
+
+            alerts =
+                response?
+                    .OrderByDescending(alert => alert.DetectedAtUtc)
+                    .ToList()
+                ?? new List<TelemetryAlert>();
+
+            RecalculateCounts();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Unable to retrieve alert data: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private IEnumerable<TelemetryAlert> FilteredAlerts
+    {
+        get
+        {
+            IEnumerable<TelemetryAlert> query =
+                alerts;
+
+            if (selectedStatus == "Unacknowledged")
+            {
+                query =
+                    query.Where(alert => !alert.IsAcknowledged);
+            }
+            else if (selectedStatus == "Acknowledged")
+            {
+                query =
+                    query.Where(alert => alert.IsAcknowledged);
+            }
+
+            if (!string.Equals(
+                selectedSeverity,
+                "All",
+                StringComparison.OrdinalIgnoreCase))
+            {
+                query =
+                    query.Where(alert =>
+                        alert.Severity.Equals(
+                            selectedSeverity,
+                            StringComparison.OrdinalIgnoreCase));
+            }
+
+            if (!string.IsNullOrWhiteSpace(searchText))
+            {
+                query =
+                    query.Where(alert =>
+                        alert.DeviceIdentifier.Contains(
+                            searchText,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        alert.MetricName.Contains(
+                            searchText,
+                            StringComparison.OrdinalIgnoreCase)
+                        ||
+                        alert.Message.Contains(
+                            searchText,
+                            StringComparison.OrdinalIgnoreCase));
+            }
+
+            return query;
+        }
+    }
+
+    private async Task AcknowledgeAlert(
+        TelemetryAlert alert)
+    {
+        acknowledgingAlertId =
+            alert.AlertId;
+
+        errorMessage = null;
+
+        try
+        {
+            HttpResponseMessage response =
+                await Http.PostAsync(
+                    $"api/alerts/{alert.AlertId}/acknowledge",
+                    null);
+
+            if (response.IsSuccessStatusCode)
+            {
+                alert.IsAcknowledged = true;
+                alert.AcknowledgedAtUtc = DateTime.UtcNow;
+
+                RecalculateCounts();
+            }
+            else
+            {
+                errorMessage =
+                    $"Unable to acknowledge alert for {alert.DeviceIdentifier}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Alert acknowledgement failed: {ex.Message}";
+        }
+        finally
+        {
+            acknowledgingAlertId =
+                null;
+        }
+    }
+
+    private void RecalculateCounts()
+    {
+        unacknowledgedCount =
+            alerts.Count(alert => !alert.IsAcknowledged);
+
+        criticalCount =
+            alerts.Count(alert =>
+                alert.Severity.Equals(
+                    "Critical",
+                    StringComparison.OrdinalIgnoreCase));
+
+        warningCount =
+            alerts.Count(alert =>
+                alert.Severity.Equals(
+                    "Warning",
+                    StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void ClearFilters()
+    {
+        searchText = string.Empty;
+        selectedStatus = "Unacknowledged";
+        selectedSeverity = "All";
+    }
+
+    private bool IsAcknowledging(
+        Guid alertId)
+    {
+        return acknowledgingAlertId == alertId;
+    }
+
+    private static string GetSeverityClass(
+        string severity)
+    {
+        return severity.Equals(
+            "Critical",
+            StringComparison.OrdinalIgnoreCase)
+                ? "critical"
+                : "warning";
+    }
+}
