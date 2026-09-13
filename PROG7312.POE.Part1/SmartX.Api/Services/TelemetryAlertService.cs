@@ -5,58 +5,82 @@ namespace SmartX.Api.Services
 {
     public class TelemetryAlertService
     {
-        private readonly List<TelemetryAlert> _alerts = new();
+        private readonly List<TelemetryAlert> _alerts =
+            new();
+
+        private readonly object _alertLock =
+            new();
 
         public IReadOnlyList<TelemetryAlert> GetAll()
         {
-            return _alerts
-                .OrderByDescending(
-                    alert => alert.DetectedAtUtc)
-                .ToList()
-                .AsReadOnly();
+            lock (_alertLock)
+            {
+                return _alerts
+                    .OrderByDescending(
+                        alert =>
+                            alert.DetectedAtUtc)
+                    .ToList()
+                    .AsReadOnly();
+            }
         }
 
         public int GetAlertCount()
         {
-            return _alerts.Count;
+            lock (_alertLock)
+            {
+                return _alerts.Count;
+            }
         }
 
         public int GetUnacknowledgedCount()
         {
-            return _alerts.Count(
-                alert => !alert.IsAcknowledged);
+            lock (_alertLock)
+            {
+                return _alerts.Count(
+                    alert =>
+                        !alert.IsAcknowledged);
+            }
         }
 
         public TelemetryAlert? GetById(
             Guid alertId)
         {
-            return _alerts.FirstOrDefault(
-                alert =>
-                    alert.AlertId == alertId);
+            lock (_alertLock)
+            {
+                return _alerts.FirstOrDefault(
+                    alert =>
+                        alert.AlertId == alertId);
+            }
         }
 
         public bool Acknowledge(
             Guid alertId)
         {
-            TelemetryAlert? alert =
-                GetById(alertId);
-
-            if (alert is null)
+            lock (_alertLock)
             {
-                return false;
-            }
+                TelemetryAlert? alert =
+                    _alerts.FirstOrDefault(
+                        item =>
+                            item.AlertId == alertId);
 
-            if (alert.IsAcknowledged)
-            {
+                if (alert is null)
+                {
+                    return false;
+                }
+
+                if (alert.IsAcknowledged)
+                {
+                    return true;
+                }
+
+                alert.IsAcknowledged =
+                    true;
+
+                alert.AcknowledgedAtUtc =
+                    DateTime.UtcNow;
+
                 return true;
             }
-
-            alert.IsAcknowledged = true;
-
-            alert.AcknowledgedAtUtc =
-                DateTime.UtcNow;
-
-            return true;
         }
 
         public void EvaluateFloat(
@@ -140,61 +164,81 @@ namespace SmartX.Api.Services
             DateTime evaluationTimeUtc,
             TimeSpan disconnectThreshold)
         {
-            bool alreadyReported =
-                _alerts.Any(alert =>
-                    alert.DeviceIdentifier.Equals(
+            lock (_alertLock)
+            {
+                bool alreadyReported =
+                    _alerts.Any(
+                        alert =>
+                            alert.DeviceIdentifier.Equals(
+                                deviceIdentifier,
+                                StringComparison.OrdinalIgnoreCase)
+                            &&
+                            alert.MetricName.Equals(
+                                "Sensor Connectivity",
+                                StringComparison.OrdinalIgnoreCase));
+
+                if (alreadyReported)
+                {
+                    return;
+                }
+
+                if (!lastSeenUtc.HasValue)
+                {
+                    AddAlertUnsafe(
                         deviceIdentifier,
-                        StringComparison.OrdinalIgnoreCase)
-                    &&
-                    alert.MetricName.Equals(
                         "Sensor Connectivity",
-                        StringComparison.OrdinalIgnoreCase));
+                        "Critical",
+                        $"No telemetry has been received from " +
+                        $"{deviceIdentifier} at " +
+                        $"{deploymentLocation}.");
 
-            if (alreadyReported)
-            {
-                return;
-            }
+                    return;
+                }
 
-            if (!lastSeenUtc.HasValue)
-            {
-                AddAlert(
+                TimeSpan timeSinceLastTelemetry =
+                    evaluationTimeUtc -
+                    lastSeenUtc.Value;
+
+                if (timeSinceLastTelemetry <=
+                    disconnectThreshold)
+                {
+                    return;
+                }
+
+                int staleMinutes =
+                    Math.Max(
+                        1,
+                        (int)Math.Floor(
+                            timeSinceLastTelemetry.TotalMinutes));
+
+                AddAlertUnsafe(
                     deviceIdentifier,
                     "Sensor Connectivity",
                     "Critical",
-                    $"No telemetry has been received from " +
                     $"{deviceIdentifier} at " +
-                    $"{deploymentLocation}.");
-
-                return;
+                    $"{deploymentLocation} has not reported " +
+                    $"telemetry for approximately " +
+                    $"{staleMinutes} minutes.");
             }
-
-            TimeSpan timeSinceLastTelemetry =
-                evaluationTimeUtc -
-                lastSeenUtc.Value;
-
-            if (timeSinceLastTelemetry <=
-                disconnectThreshold)
-            {
-                return;
-            }
-
-            int staleMinutes =
-                Math.Max(
-                    1,
-                    (int)Math.Floor(
-                        timeSinceLastTelemetry.TotalMinutes));
-
-            AddAlert(
-                deviceIdentifier,
-                "Sensor Connectivity",
-                "Critical",
-                $"{deviceIdentifier} at " +
-                $"{deploymentLocation} has not reported " +
-                $"telemetry for approximately " +
-                $"{staleMinutes} minutes.");
         }
 
         private void AddAlert(
+            string deviceIdentifier,
+            string metricName,
+            string severity,
+            string message)
+        {
+            lock (_alertLock)
+            {
+                AddAlertUnsafe(
+                    deviceIdentifier,
+                    metricName,
+                    severity,
+                    message);
+            }
+        }
+
+        private void AddAlertUnsafe(
             string deviceIdentifier,
             string metricName,
             string severity,

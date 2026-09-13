@@ -4,54 +4,121 @@ namespace SmartX.Api.Services
 {
     public class TelemetryIngestionService
     {
-        private readonly TelemetryBuffer<TelemetryPacket<float>> _floatTelemetry = new();
-        private readonly TelemetryBuffer<TelemetryPacket<int>> _integerTelemetry = new();
-        private readonly TelemetryBuffer<TelemetryPacket<bool>> _booleanTelemetry = new();
+        private readonly TelemetryBuffer<TelemetryPacket<float>>
+            _floatTelemetry = new();
+
+        private readonly TelemetryBuffer<TelemetryPacket<int>>
+            _integerTelemetry = new();
+
+        private readonly TelemetryBuffer<TelemetryPacket<bool>>
+            _booleanTelemetry = new();
+
+        private readonly object _floatLock = new();
+        private readonly object _integerLock = new();
+        private readonly object _booleanLock = new();
 
         private readonly TelemetryAlertService _alertService;
 
-        public TelemetryIngestionService(TelemetryAlertService alertService)
+        public TelemetryIngestionService(
+            TelemetryAlertService alertService)
         {
             _alertService = alertService;
         }
 
-        public void IngestFloat(TelemetryPacket<float> packet)
+        public void IngestFloat(
+            TelemetryPacket<float> packet)
         {
-            _floatTelemetry.Add(packet);
+            lock (_floatLock)
+            {
+                _floatTelemetry.Add(packet);
+            }
+
             _alertService.EvaluateFloat(packet);
         }
 
-        public void IngestInteger(TelemetryPacket<int> packet)
+        public void IngestInteger(
+            TelemetryPacket<int> packet)
         {
-            _integerTelemetry.Add(packet);
+            lock (_integerLock)
+            {
+                _integerTelemetry.Add(packet);
+            }
+
             _alertService.EvaluateInteger(packet);
         }
 
-        public void IngestBoolean(TelemetryPacket<bool> packet)
+        public void IngestBoolean(
+            TelemetryPacket<bool> packet)
         {
-            _booleanTelemetry.Add(packet);
+            lock (_booleanLock)
+            {
+                _booleanTelemetry.Add(packet);
+            }
         }
 
-        public IReadOnlyList<TelemetryPacket<float>> GetFloatTelemetry()
+        public IReadOnlyList<TelemetryPacket<float>>
+            GetFloatTelemetry()
         {
-            return _floatTelemetry.GetAll();
+            lock (_floatLock)
+            {
+                return _floatTelemetry
+                    .GetAll()
+                    .ToList()
+                    .AsReadOnly();
+            }
         }
 
-        public IReadOnlyList<TelemetryPacket<int>> GetIntegerTelemetry()
+        public IReadOnlyList<TelemetryPacket<int>>
+            GetIntegerTelemetry()
         {
-            return _integerTelemetry.GetAll();
+            lock (_integerLock)
+            {
+                return _integerTelemetry
+                    .GetAll()
+                    .ToList()
+                    .AsReadOnly();
+            }
         }
 
-        public IReadOnlyList<TelemetryPacket<bool>> GetBooleanTelemetry()
+        public IReadOnlyList<TelemetryPacket<bool>>
+            GetBooleanTelemetry()
         {
-            return _booleanTelemetry.GetAll();
+            lock (_booleanLock)
+            {
+                return _booleanTelemetry
+                    .GetAll()
+                    .ToList()
+                    .AsReadOnly();
+            }
         }
 
         public int GetTotalPacketCount()
         {
-            return _floatTelemetry.Count
-                 + _integerTelemetry.Count
-                 + _booleanTelemetry.Count;
+            int floatCount;
+            int integerCount;
+            int booleanCount;
+
+            lock (_floatLock)
+            {
+                floatCount =
+                    _floatTelemetry.Count;
+            }
+
+            lock (_integerLock)
+            {
+                integerCount =
+                    _integerTelemetry.Count;
+            }
+
+            lock (_booleanLock)
+            {
+                booleanCount =
+                    _booleanTelemetry.Count;
+            }
+
+            return floatCount
+                 + integerCount
+                 + booleanCount;
         }
     }
 }
