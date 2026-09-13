@@ -8,9 +8,12 @@ namespace SmartX.Api.Controllers
     [Route("api/[controller]")]
     public class TelemetryController : ControllerBase
     {
+        private const int MaximumTake = 1000;
+
         private readonly TelemetryIngestionService _telemetryService;
 
-        public TelemetryController(TelemetryIngestionService telemetryService)
+        public TelemetryController(
+            TelemetryIngestionService telemetryService)
         {
             _telemetryService = telemetryService;
         }
@@ -55,21 +58,102 @@ namespace SmartX.Api.Controllers
         }
 
         [HttpGet("float")]
-        public ActionResult<IReadOnlyList<TelemetryPacket<float>>> GetFloatTelemetry()
+        public ActionResult<
+            IReadOnlyList<TelemetryPacket<float>>>
+            GetFloatTelemetry(
+                [FromQuery] int? take = null)
         {
-            return Ok(_telemetryService.GetFloatTelemetry());
+            IReadOnlyList<TelemetryPacket<float>> telemetry =
+                _telemetryService.GetFloatTelemetry();
+
+            if (!take.HasValue)
+            {
+                return Ok(telemetry);
+            }
+
+            if (!IsValidTake(take.Value))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        $"Take must be between 1 and {MaximumTake}."
+                });
+            }
+
+            List<TelemetryPacket<float>> recentTelemetry =
+                telemetry
+                    .OrderByDescending(
+                        packet => packet.TimestampUtc)
+                    .Take(take.Value)
+                    .ToList();
+
+            return Ok(recentTelemetry);
         }
 
         [HttpGet("integer")]
-        public ActionResult<IReadOnlyList<TelemetryPacket<int>>> GetIntegerTelemetry()
+        public ActionResult<
+            IReadOnlyList<TelemetryPacket<int>>>
+            GetIntegerTelemetry(
+                [FromQuery] int? take = null)
         {
-            return Ok(_telemetryService.GetIntegerTelemetry());
+            IReadOnlyList<TelemetryPacket<int>> telemetry =
+                _telemetryService.GetIntegerTelemetry();
+
+            if (!take.HasValue)
+            {
+                return Ok(telemetry);
+            }
+
+            if (!IsValidTake(take.Value))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        $"Take must be between 1 and {MaximumTake}."
+                });
+            }
+
+            List<TelemetryPacket<int>> recentTelemetry =
+                telemetry
+                    .OrderByDescending(
+                        packet => packet.TimestampUtc)
+                    .Take(take.Value)
+                    .ToList();
+
+            return Ok(recentTelemetry);
         }
 
         [HttpGet("boolean")]
-        public ActionResult<IReadOnlyList<TelemetryPacket<bool>>> GetBooleanTelemetry()
+        public ActionResult<
+            IReadOnlyList<TelemetryPacket<bool>>>
+            GetBooleanTelemetry(
+                [FromQuery] int? take = null)
         {
-            return Ok(_telemetryService.GetBooleanTelemetry());
+            IReadOnlyList<TelemetryPacket<bool>> telemetry =
+                _telemetryService.GetBooleanTelemetry();
+
+            if (!take.HasValue)
+            {
+                return Ok(telemetry);
+            }
+
+            if (!IsValidTake(take.Value))
+            {
+                return BadRequest(new
+                {
+                    message =
+                        $"Take must be between 1 and {MaximumTake}."
+                });
+            }
+
+            List<TelemetryPacket<bool>> recentTelemetry =
+                telemetry
+                    .OrderByDescending(
+                        packet => packet.TimestampUtc)
+                    .Take(take.Value)
+                    .ToList();
+
+            return Ok(recentTelemetry);
         }
 
         [HttpGet("count")]
@@ -77,8 +161,49 @@ namespace SmartX.Api.Controllers
         {
             return Ok(new
             {
-                totalPackets = _telemetryService.GetTotalPacketCount()
+                totalPackets =
+                    _telemetryService.GetTotalPacketCount()
             });
+        }
+
+        [HttpGet("summary")]
+        public IActionResult GetSummary()
+        {
+            int floatPackets =
+                _telemetryService
+                    .GetFloatTelemetry()
+                    .Count;
+
+            int integerPackets =
+                _telemetryService
+                    .GetIntegerTelemetry()
+                    .Count;
+
+            int booleanPackets =
+                _telemetryService
+                    .GetBooleanTelemetry()
+                    .Count;
+
+            return Ok(new
+            {
+                totalPackets =
+                    floatPackets +
+                    integerPackets +
+                    booleanPackets,
+
+                floatPackets,
+
+                integerPackets,
+
+                booleanPackets
+            });
+        }
+
+        private static bool IsValidTake(
+            int take)
+        {
+            return take >= 1 &&
+                   take <= MaximumTake;
         }
     }
 }

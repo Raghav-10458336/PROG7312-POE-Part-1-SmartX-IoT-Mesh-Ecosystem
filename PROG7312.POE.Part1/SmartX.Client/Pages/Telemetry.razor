@@ -110,7 +110,7 @@
 
                 <div class="summary-card">
                     <span>Total packets</span>
-                    <strong>@allTelemetry.Count.ToString("N0")</strong>
+                    <strong>@totalPacketCount.ToString("N0")</strong>
                     <small>Current gateway workload</small>
                 </div>
 
@@ -448,7 +448,7 @@
                         <h2>Telemetry readings</h2>
 
                         <p>
-                            Filter the current gateway workload by device,
+                            Filter the recent gateway workload by device,
                             metric or telemetry type.
                         </p>
                     </div>
@@ -504,9 +504,11 @@
                 </div>
 
                 <div class="table-note">
-                    Showing the latest
+                    The client retrieves only the latest
+                    <strong>250 readings per telemetry type</strong>
+                    from the gateway and renders the latest
                     <strong>100</strong>
-                    matching readings to keep the dashboard responsive.
+                    matching readings.
                 </div>
 
                 @if (!FilteredTelemetry.Any())
@@ -609,6 +611,8 @@
 </div>
 
 @code {
+    private const int RecentTelemetryTake = 250;
+
     private bool loading = true;
 
     private string? errorMessage;
@@ -617,6 +621,7 @@
     private string selectedType = "All";
     private string selectedMetric = "All";
 
+    private int totalPacketCount;
     private int floatCount;
     private int integerCount;
     private int booleanCount;
@@ -667,20 +672,25 @@
                 Http.GetFromJsonAsync<List<SensorRegistration>>(
                     "api/sensors");
 
+            Task<TelemetrySummaryResponse?> summaryTask =
+                Http.GetFromJsonAsync<TelemetrySummaryResponse>(
+                    "api/telemetry/summary");
+
             Task<List<TelemetryPacket<float>>?> floatTask =
                 Http.GetFromJsonAsync<List<TelemetryPacket<float>>>(
-                    "api/telemetry/float");
+                    $"api/telemetry/float?take={RecentTelemetryTake}");
 
             Task<List<TelemetryPacket<int>>?> integerTask =
                 Http.GetFromJsonAsync<List<TelemetryPacket<int>>>(
-                    "api/telemetry/integer");
+                    $"api/telemetry/integer?take={RecentTelemetryTake}");
 
             Task<List<TelemetryPacket<bool>>?> booleanTask =
                 Http.GetFromJsonAsync<List<TelemetryPacket<bool>>>(
-                    "api/telemetry/boolean");
+                    $"api/telemetry/boolean?take={RecentTelemetryTake}");
 
             await Task.WhenAll(
                 sensorTask,
+                summaryTask,
                 floatTask,
                 integerTask,
                 booleanTask);
@@ -695,6 +705,22 @@
                         sensor.DeviceIdentifier)
                     .ToList();
 
+            TelemetrySummaryResponse summary =
+                summaryTask.Result
+                ?? new TelemetrySummaryResponse();
+
+            totalPacketCount =
+                summary.TotalPackets;
+
+            floatCount =
+                summary.FloatPackets;
+
+            integerCount =
+                summary.IntegerPackets;
+
+            booleanCount =
+                summary.BooleanPackets;
+
             List<TelemetryPacket<float>> floatPackets =
                 floatTask.Result
                 ?? new List<TelemetryPacket<float>>();
@@ -707,10 +733,6 @@
                 booleanTask.Result
                 ?? new List<TelemetryPacket<bool>>();
 
-            floatCount = floatPackets.Count;
-            integerCount = integerPackets.Count;
-            booleanCount = booleanPackets.Count;
-
             allTelemetry =
                 new List<TelemetryDisplayRow>();
 
@@ -718,41 +740,71 @@
                 floatPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId = packet.SensorId,
-                        DeviceIdentifier = packet.DeviceIdentifier,
-                        TelemetryType = "Environmental",
-                        MetricName = packet.MetricName,
+                        SensorId =
+                            packet.SensorId,
+
+                        DeviceIdentifier =
+                            packet.DeviceIdentifier,
+
+                        TelemetryType =
+                            "Environmental",
+
+                        MetricName =
+                            packet.MetricName,
+
                         DisplayValue =
                             $"{packet.Value:F2} {packet.Unit}",
-                        TimestampUtc = packet.TimestampUtc
+
+                        TimestampUtc =
+                            packet.TimestampUtc
                     }));
 
             allTelemetry.AddRange(
                 integerPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId = packet.SensorId,
-                        DeviceIdentifier = packet.DeviceIdentifier,
-                        TelemetryType = "Power",
-                        MetricName = packet.MetricName,
+                        SensorId =
+                            packet.SensorId,
+
+                        DeviceIdentifier =
+                            packet.DeviceIdentifier,
+
+                        TelemetryType =
+                            "Power",
+
+                        MetricName =
+                            packet.MetricName,
+
                         DisplayValue =
                             $"{packet.Value:N0} {packet.Unit}",
-                        TimestampUtc = packet.TimestampUtc
+
+                        TimestampUtc =
+                            packet.TimestampUtc
                     }));
 
             allTelemetry.AddRange(
                 booleanPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId = packet.SensorId,
-                        DeviceIdentifier = packet.DeviceIdentifier,
-                        TelemetryType = "Actuator",
-                        MetricName = packet.MetricName,
+                        SensorId =
+                            packet.SensorId,
+
+                        DeviceIdentifier =
+                            packet.DeviceIdentifier,
+
+                        TelemetryType =
+                            "Actuator",
+
+                        MetricName =
+                            packet.MetricName,
+
                         DisplayValue =
                             FormatBooleanValue(
                                 packet.MetricName,
                                 packet.Value),
-                        TimestampUtc = packet.TimestampUtc
+
+                        TimestampUtc =
+                            packet.TimestampUtc
                     }));
 
             allTelemetry =
@@ -917,8 +969,11 @@
                 _ => string.Empty
             };
 
-        submissionSuccess = null;
-        submissionError = null;
+        submissionSuccess =
+            null;
+
+        submissionError =
+            null;
     }
 
     private async Task SubmitTelemetry()
@@ -1095,8 +1150,11 @@
 
     private async Task AnalysePower()
     {
-        powerAnalysisError = null;
-        powerAnalysisResult = null;
+        powerAnalysisError =
+            null;
+
+        powerAnalysisResult =
+            null;
 
         if (!meterAInput.HasValue ||
             !meterBInput.HasValue)
@@ -1116,7 +1174,8 @@
             return;
         }
 
-        analysingPower = true;
+        analysingPower =
+            true;
 
         try
         {
@@ -1146,7 +1205,8 @@
         }
         finally
         {
-            analysingPower = false;
+            analysingPower =
+                false;
         }
     }
 
@@ -1254,6 +1314,17 @@
             "Actuator" => "A",
             _ => "T"
         };
+    }
+
+    private sealed class TelemetrySummaryResponse
+    {
+        public int TotalPackets { get; set; }
+
+        public int FloatPackets { get; set; }
+
+        public int IntegerPackets { get; set; }
+
+        public int BooleanPackets { get; set; }
     }
 
     private sealed class TelemetryDisplayRow
