@@ -1,0 +1,631 @@
+﻿@page "/attachments"
+
+@using System.Net.Http.Headers
+@using System.Net.Http.Json
+@using Microsoft.AspNetCore.Components.Forms
+@using SmartX.Shared.Models
+
+@inject HttpClient Http
+
+<PageTitle>Smart-X | Attachments</PageTitle>
+
+<div class="attachments-page">
+
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+            <div class="brand-mark">SX</div>
+
+            <div>
+                <strong>Smart-X</strong>
+                <span>IoT Mesh</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <span class="nav-label">WORKSPACE</span>
+
+            <a class="nav-item" href="/dashboard">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </a>
+
+            <a class="nav-item" href="/sensors">
+                <span class="nav-icon">◉</span>
+                Sensors
+            </a>
+
+            <a class="nav-item" href="/telemetry">
+                <span class="nav-icon">⌁</span>
+                Telemetry
+            </a>
+
+            <a class="nav-item" href="/alerts">
+                <span class="nav-icon">!</span>
+                Attention Centre
+            </a>
+
+            <span class="nav-label secondary-label">
+                MANAGEMENT
+            </span>
+
+            <a class="nav-item active" href="/attachments">
+                <span class="nav-icon">□</span>
+                Attachments
+            </a>
+
+            <a class="nav-item" href="/deployment">
+                <span class="nav-icon">⌘</span>
+                Deployment Validation
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="sidebar-status">
+                <span class="status-dot"></span>
+                Gateway connected
+            </span>
+
+            <span>Part 1 Gateway</span>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <div>
+                <span class="page-eyebrow">
+                    SENSOR FILE MANAGEMENT
+                </span>
+
+                <h1>Attachments</h1>
+
+                <p>
+                    Upload configuration files, hardware logs,
+                    deployment documents and device images.
+                </p>
+            </div>
+
+            <a class="back-button" href="/dashboard">
+                ← Dashboard
+            </a>
+        </header>
+
+        @if (loading)
+        {
+            <div class="message-panel">
+                Loading sensor registry...
+            </div>
+        }
+        else
+        {
+            <section class="attachment-grid">
+
+                <div class="upload-panel">
+
+                    <div class="panel-heading">
+                        <span class="panel-eyebrow">
+                            SECURE UPLOAD
+                        </span>
+
+                        <h2>Add sensor attachment</h2>
+
+                        <p>
+                            Files are transmitted through HTTPS and
+                            encrypted by the gateway before storage.
+                        </p>
+                    </div>
+
+                    <div class="upload-body">
+
+                        <div class="form-field">
+                            <label>Sensor</label>
+
+                            <select value="@selectedSensorId"
+                                    @onchange="SensorChanged">
+
+                                <option value="">
+                                    Select a registered sensor
+                                </option>
+
+                                @foreach (SensorRegistration sensor in sensors)
+                                {
+                                    <option value="@sensor.Id">
+                                        @sensor.DeviceIdentifier —
+                                        @sensor.DeploymentLocation
+                                    </option>
+                                }
+
+                            </select>
+                        </div>
+
+                        <div class="file-field">
+
+                            <label>Attachment</label>
+
+                            <div class="file-input-wrapper">
+                                <InputFile OnChange="FileSelected" />
+                            </div>
+
+                            <small>
+                                Maximum file size: 10 MB
+                            </small>
+
+                            <small>
+                                Supported: TXT, LOG, JSON, XML, CSV,
+                                PDF, DOCX, XLSX, JPG and PNG
+                            </small>
+
+                        </div>
+
+                        @if (selectedFile is not null)
+                        {
+                            <div class="selected-file">
+                                <div class="file-icon">
+                                    FILE
+                                </div>
+
+                                <div>
+                                    <strong>
+                                        @selectedFile.Name
+                                    </strong>
+
+                                    <span>
+                                        @FormatFileSize(selectedFile.Size)
+                                    </span>
+                                </div>
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(successMessage))
+                        {
+                            <div class="success-message">
+                                @successMessage
+                            </div>
+                        }
+
+                        @if (!string.IsNullOrWhiteSpace(errorMessage))
+                        {
+                            <div class="error-message">
+                                @errorMessage
+                            </div>
+                        }
+
+                        <button class="upload-button"
+                                disabled="@(!CanUpload || uploading)"
+                                @onclick="UploadAttachment">
+
+                            @(uploading
+                                ? "Encrypting and uploading..."
+                                : "Upload attachment")
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+                <div class="security-panel">
+
+                    <span class="panel-eyebrow">
+                        STORAGE POLICY
+                    </span>
+
+                    <h2>Protected device records</h2>
+
+                    <div class="security-item">
+                        <div class="security-icon">1</div>
+
+                        <div>
+                            <strong>HTTPS transport</strong>
+
+                            <span>
+                                Files are transmitted to the Smart-X
+                                gateway through the secure API connection.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="security-item">
+                        <div class="security-icon">2</div>
+
+                        <div>
+                            <strong>Encrypted storage</strong>
+
+                            <span>
+                                Uploaded content is encrypted before it
+                                is written to gateway storage.
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="security-item">
+                        <div class="security-icon">3</div>
+
+                        <div>
+                            <strong>Sensor association</strong>
+
+                            <span>
+                                Each stored file remains linked to the
+                                registered device that owns it.
+                            </span>
+                        </div>
+                    </div>
+
+                </div>
+
+            </section>
+
+            <section class="records-panel">
+
+                <div class="records-heading">
+
+                    <div>
+                        <span class="panel-eyebrow">
+                            SENSOR RECORDS
+                        </span>
+
+                        <h2>Stored attachments</h2>
+
+                        @if (SelectedSensor is null)
+                        {
+                            <p>
+                                Select a sensor to view its stored files.
+                            </p>
+                        }
+                        else
+                        {
+                            <p>
+                                Files associated with
+                                <strong>@SelectedSensor.DeviceIdentifier</strong>.
+                            </p>
+                        }
+                    </div>
+
+                    <div class="attachment-count">
+                        @attachments.Count
+                        <span>files</span>
+                    </div>
+
+                </div>
+
+                @if (SelectedSensor is null)
+                {
+                    <div class="empty-state">
+                        Select a sensor above to inspect its attachments.
+                    </div>
+                }
+                else if (loadingAttachments)
+                {
+                    <div class="empty-state">
+                        Loading attachments...
+                    </div>
+                }
+                else if (attachments.Count == 0)
+                {
+                    <div class="empty-state">
+                        No attachments have been uploaded for this sensor.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrapper">
+
+                        <table class="attachment-table">
+
+                            <thead>
+                                <tr>
+                                    <th>FILE</th>
+                                    <th>TYPE</th>
+                                    <th>SIZE</th>
+                                    <th>UPLOADED</th>
+                                    <th>STORAGE</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (SensorAttachment attachment
+                                    in attachments.OrderByDescending(
+                                        item => item.UploadedAtUtc))
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="file-name-cell">
+                                                <div class="table-file-icon">
+                                                    @GetFileLabel(
+                                                        attachment.OriginalFileName)
+                                                </div>
+
+                                                <strong>
+                                                    @attachment.OriginalFileName
+                                                </strong>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            @GetDisplayContentType(
+                                                attachment.ContentType)
+                                        </td>
+
+                                        <td>
+                                            @FormatFileSize(
+                                                attachment.FileSizeBytes)
+                                        </td>
+
+                                        <td>
+                                            <div class="date-cell">
+                                                <strong>
+                                                    @(attachment.UploadedAtUtc
+                                                        .ToLocalTime()
+                                                        .ToString("HH:mm"))
+                                                </strong>
+
+                                                <span>
+                                                    @(attachment.UploadedAtUtc
+                                                        .ToLocalTime()
+                                                        .ToString("dd MMM yyyy"))
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            <span class="encrypted-badge">
+                                                Encrypted
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+                }
+
+            </section>
+        }
+
+    </main>
+
+</div>
+
+@code {
+    private const long MaxFileSize =
+        10 * 1024 * 1024;
+
+    private bool loading = true;
+    private bool uploading;
+    private bool loadingAttachments;
+
+    private string selectedSensorId =
+        string.Empty;
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    private IBrowserFile? selectedFile;
+
+    private List<SensorRegistration> sensors =
+        new();
+
+    private List<SensorAttachment> attachments =
+        new();
+
+    private SensorRegistration? SelectedSensor
+    {
+        get
+        {
+            if (!Guid.TryParse(
+                selectedSensorId,
+                out Guid sensorId))
+            {
+                return null;
+            }
+
+            return sensors.FirstOrDefault(
+                sensor => sensor.Id == sensorId);
+        }
+    }
+
+    private bool CanUpload =>
+        SelectedSensor is not null &&
+        selectedFile is not null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            sensors =
+                await Http.GetFromJsonAsync<
+                    List<SensorRegistration>>(
+                    "api/sensors")
+                ?? new List<SensorRegistration>();
+
+            sensors =
+                sensors
+                    .OrderBy(sensor =>
+                        sensor.DeviceIdentifier)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Unable to load sensors: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task SensorChanged(
+        ChangeEventArgs args)
+    {
+        selectedSensorId =
+            args.Value?.ToString()
+            ?? string.Empty;
+
+        selectedFile = null;
+        successMessage = null;
+        errorMessage = null;
+
+        await LoadAttachments();
+    }
+
+    private void FileSelected(
+        InputFileChangeEventArgs args)
+    {
+        successMessage = null;
+        errorMessage = null;
+
+        selectedFile =
+            args.File;
+
+        if (selectedFile.Size > MaxFileSize)
+        {
+            errorMessage =
+                "The selected file exceeds the 10 MB limit.";
+
+            selectedFile = null;
+        }
+    }
+
+    private async Task UploadAttachment()
+    {
+        if (SelectedSensor is null ||
+            selectedFile is null)
+        {
+            return;
+        }
+
+        uploading = true;
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            using MultipartFormDataContent content =
+                new();
+
+            await using Stream fileStream =
+                selectedFile.OpenReadStream(
+                    MaxFileSize);
+
+            using StreamContent fileContent =
+                new(fileStream);
+
+            if (!string.IsNullOrWhiteSpace(
+                selectedFile.ContentType))
+            {
+                fileContent.Headers.ContentType =
+                    new MediaTypeHeaderValue(
+                        selectedFile.ContentType);
+            }
+
+            content.Add(
+                fileContent,
+                "file",
+                selectedFile.Name);
+
+            HttpResponseMessage response =
+                await Http.PostAsync(
+                    $"api/sensors/{SelectedSensor.Id}/attachments",
+                    content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage =
+                    $"{selectedFile.Name} was uploaded and encrypted successfully.";
+
+                selectedFile = null;
+
+                await LoadAttachments();
+            }
+            else
+            {
+                string responseText =
+                    await response.Content.ReadAsStringAsync();
+
+                errorMessage =
+                    $"Upload failed. {responseText}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Upload failed: {ex.Message}";
+        }
+        finally
+        {
+            uploading = false;
+        }
+    }
+
+    private async Task LoadAttachments()
+    {
+        attachments.Clear();
+
+        if (SelectedSensor is null)
+        {
+            return;
+        }
+
+        loadingAttachments = true;
+
+        try
+        {
+            attachments =
+                await Http.GetFromJsonAsync<
+                    List<SensorAttachment>>(
+                    $"api/sensors/{SelectedSensor.Id}/attachments")
+                ?? new List<SensorAttachment>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Unable to load attachments: {ex.Message}";
+        }
+        finally
+        {
+            loadingAttachments = false;
+        }
+    }
+
+    private static string FormatFileSize(
+        long bytes)
+    {
+        if (bytes < 1024)
+        {
+            return $"{bytes} B";
+        }
+
+        if (bytes < 1024 * 1024)
+        {
+            return $"{bytes / 1024d:F1} KB";
+        }
+
+        return $"{bytes / 1024d / 1024d:F1} MB";
+    }
+
+    private static string GetFileLabel(
+        string fileName)
+    {
+        string extension =
+            Path.GetExtension(fileName)
+                .TrimStart('.')
+                .ToUpperInvariant();
+
+        return string.IsNullOrWhiteSpace(extension)
+            ? "FILE"
+            : extension;
+    }
+
+    private static string GetDisplayContentType(
+        string contentType)
+    {
+        return string.IsNullOrWhiteSpace(contentType)
+            ? "Unknown"
+            : contentType;
+    }
+}
