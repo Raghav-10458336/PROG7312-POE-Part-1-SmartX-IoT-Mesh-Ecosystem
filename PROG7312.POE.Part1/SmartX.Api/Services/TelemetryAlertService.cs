@@ -9,7 +9,10 @@ namespace SmartX.Api.Services
 
         public IReadOnlyList<TelemetryAlert> GetAll()
         {
-            return _alerts.AsReadOnly();
+            return _alerts
+                .OrderByDescending(alert => alert.DetectedAtUtc)
+                .ToList()
+                .AsReadOnly();
         }
 
         public int GetAlertCount()
@@ -17,63 +20,99 @@ namespace SmartX.Api.Services
             return _alerts.Count;
         }
 
-        public void EvaluateFloat(TelemetryPacket<float> packet)
+        public int GetUnacknowledgedCount()
         {
-            switch (packet.MetricName)
+            return _alerts.Count(alert => !alert.IsAcknowledged);
+        }
+
+        public TelemetryAlert? GetById(Guid alertId)
+        {
+            return _alerts.FirstOrDefault(
+                alert => alert.AlertId == alertId);
+        }
+
+        public bool Acknowledge(Guid alertId)
+        {
+            TelemetryAlert? alert =
+                GetById(alertId);
+
+            if (alert is null)
             {
-                case "Soil Moisture" when packet.Value < 20:
-                    AddAlert(
-                        packet.DeviceIdentifier,
-                        packet.MetricName,
-                        "Critical",
-                        $"Low soil moisture detected: {packet.Value:F1}%.");
-                    break;
+                return false;
+            }
 
-                case "Temperature" when packet.Value > 38:
-                    AddAlert(
-                        packet.DeviceIdentifier,
-                        packet.MetricName,
-                        "Critical",
-                        $"High temperature detected: {packet.Value:F1}°C.");
-                    break;
+            if (alert.IsAcknowledged)
+            {
+                return true;
+            }
 
-                case "Humidity" when packet.Value < 25:
-                    AddAlert(
-                        packet.DeviceIdentifier,
-                        packet.MetricName,
-                        "Warning",
-                        $"Low humidity detected: {packet.Value:F1}%.");
-                    break;
+            alert.IsAcknowledged = true;
+            alert.AcknowledgedAtUtc = DateTime.UtcNow;
+
+            return true;
+        }
+
+        public void EvaluateFloat(
+            TelemetryPacket<float> packet)
+        {
+            if (packet.MetricName == "Soil Moisture"
+                && packet.Value < 20)
+            {
+                AddAlert(
+                    packet.DeviceIdentifier,
+                    packet.MetricName,
+                    "Critical",
+                    $"Soil moisture dropped to {packet.Value:F2}%.");
+            }
+            else if (packet.MetricName == "Temperature"
+                && packet.Value > 38)
+            {
+                AddAlert(
+                    packet.DeviceIdentifier,
+                    packet.MetricName,
+                    "Critical",
+                    $"Temperature increased to {packet.Value:F2} °C.");
+            }
+            else if (packet.MetricName == "Humidity"
+                && packet.Value < 25)
+            {
+                AddAlert(
+                    packet.DeviceIdentifier,
+                    packet.MetricName,
+                    "Warning",
+                    $"Humidity dropped to {packet.Value:F2}%.");
             }
         }
 
-        public void EvaluateInteger(TelemetryPacket<int> packet)
+        public void EvaluateInteger(
+            TelemetryPacket<int> packet)
         {
-            switch (packet.MetricName)
+            if (packet.MetricName == "Power Draw"
+                && packet.Value > 4500)
             {
-                case "Power Draw" when packet.Value > 4500:
-                    AddAlert(
-                        packet.DeviceIdentifier,
-                        packet.MetricName,
-                        "Critical",
-                        $"Power spike detected: {packet.Value} W.");
-                    break;
-
-                case "Energy Usage" when packet.Value > 5500:
-                    AddAlert(
-                        packet.DeviceIdentifier,
-                        packet.MetricName,
-                        "Warning",
-                        $"High energy usage detected: {packet.Value} Wh.");
-                    break;
-
-                case "Flow Rate" when packet.Value > 350:
-                    AddAlert(
-                        packet.DeviceIdentifier,
-                        packet.MetricName,
-                        "Warning",
-                        $"Abnormal flow rate detected: {packet.Value} L/h.");
-                    break;
+                AddAlert(
+                    packet.DeviceIdentifier,
+                    packet.MetricName,
+                    "Critical",
+                    $"Power draw increased to {packet.Value:N0} W.");
+            }
+            else if (packet.MetricName == "Energy Usage"
+                && packet.Value > 5500)
+            {
+                AddAlert(
+                    packet.DeviceIdentifier,
+                    packet.MetricName,
+                    "Warning",
+                    $"Energy usage increased to {packet.Value:N0} Wh.");
+            }
+            else if (packet.MetricName == "Flow Rate"
+                && packet.Value > 350)
+            {
+                AddAlert(
+                    packet.DeviceIdentifier,
+                    packet.MetricName,
+                    "Warning",
+                    $"Flow rate increased to {packet.Value:N0} L/h.");
             }
         }
 
@@ -83,13 +122,17 @@ namespace SmartX.Api.Services
             string severity,
             string message)
         {
-            _alerts.Add(new TelemetryAlert
+            TelemetryAlert alert = new()
             {
                 DeviceIdentifier = deviceIdentifier,
                 MetricName = metricName,
                 Severity = severity,
-                Message = message
-            });
+                Message = message,
+                DetectedAtUtc = DateTime.UtcNow,
+                IsAcknowledged = false
+            };
+
+            _alerts.Add(alert);
         }
     }
 }

@@ -13,5 +13,9 @@
         public string Message { get; set; } = string.Empty;
 
         public DateTime DetectedAtUtc { get; set; } = DateTime.UtcNow;
+
+        public bool IsAcknowledged { get; set; }
+
+        public DateTime? AcknowledgedAtUtc { get; set; }
     }
 }
