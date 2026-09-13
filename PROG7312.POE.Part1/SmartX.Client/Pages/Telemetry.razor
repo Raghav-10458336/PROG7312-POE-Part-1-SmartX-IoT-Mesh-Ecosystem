@@ -1,6 +1,10 @@
 ﻿@page "/telemetry"
+
 @using System.Net.Http.Json
+@using SmartX.Shared.Enums
+@using SmartX.Shared.Models
 @using SmartX.Shared.Telemetry
+
 @inject HttpClient Http
 
 <PageTitle>Smart-X | Telemetry</PageTitle>
@@ -40,7 +44,9 @@
                 Attention Centre
             </a>
 
-            <span class="nav-label secondary-label">MANAGEMENT</span>
+            <span class="nav-label secondary-label">
+                MANAGEMENT
+            </span>
 
             <a class="nav-item" href="/attachments">
                 <span class="nav-icon">□</span>
@@ -74,8 +80,8 @@
                 <h1>Telemetry Stream</h1>
 
                 <p>
-                    Inspect environmental, power and actuator readings
-                    received by the Smart-X gateway.
+                    Submit and inspect environmental, power and actuator
+                    readings processed by the Smart-X gateway.
                 </p>
             </div>
 
@@ -104,7 +110,7 @@
                 <div class="summary-card">
                     <span>Total packets</span>
                     <strong>@allTelemetry.Count.ToString("N0")</strong>
-                    <small>Current seeded workload</small>
+                    <small>Current gateway workload</small>
                 </div>
 
                 <div class="summary-card environmental-card">
@@ -124,6 +130,167 @@
                     <strong>@booleanCount.ToString("N0")</strong>
                     <small>Boolean telemetry packets</small>
                 </div>
+
+            </section>
+
+            <section class="ingestion-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+                        <span class="panel-eyebrow">
+                            API RECEIVER
+                        </span>
+
+                        <h2>Submit sensor reading</h2>
+
+                        <p>
+                            Push a typed telemetry packet to the Smart-X
+                            API and verify immediate backend ingestion.
+                        </p>
+                    </div>
+
+                    <div class="receiver-status">
+                        <span class="receiver-dot"></span>
+
+                        <div>
+                            <strong>Online</strong>
+                            <small>Telemetry receiver</small>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="ingestion-form">
+
+                    <div class="form-field">
+                        <label>Telemetry type</label>
+
+                        <select value="@submissionType"
+                                @onchange="SubmissionTypeChanged">
+
+                            <option value="Float">
+                                Environmental / Float
+                            </option>
+
+                            <option value="Integer">
+                                Power / Integer
+                            </option>
+
+                            <option value="Boolean">
+                                Actuator / Boolean
+                            </option>
+
+                        </select>
+                    </div>
+
+                    <div class="form-field sensor-field">
+                        <label>Sensor</label>
+
+                        <select @bind="submissionSensorId">
+
+                            <option value="">
+                                Select registered sensor
+                            </option>
+
+                            @foreach (SensorRegistration sensor
+                                in EligibleSubmissionSensors)
+                            {
+                                <option value="@sensor.Id">
+                                    @sensor.DeviceIdentifier —
+                                    @sensor.DeploymentLocation
+                                </option>
+                            }
+
+                        </select>
+                    </div>
+
+                    <div class="form-field">
+                        <label>Metric</label>
+
+                        <select value="@submissionMetric"
+                                @onchange="SubmissionMetricChanged">
+
+                            @foreach (string metric
+                                in AvailableSubmissionMetrics)
+                            {
+                                <option value="@metric">
+                                    @metric
+                                </option>
+                            }
+
+                        </select>
+                    </div>
+
+                    <div class="form-field unit-field">
+                        <label>Unit</label>
+
+                        <input type="text"
+                               @bind="submissionUnit" />
+                    </div>
+
+                    @if (submissionType == "Boolean")
+                    {
+                        <div class="form-field">
+                            <label>Value</label>
+
+                            <select @bind="submissionBooleanValue">
+                                <option value="true">
+                                    True
+                                </option>
+
+                                <option value="false">
+                                    False
+                                </option>
+                            </select>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-field">
+                            <label>Value</label>
+
+                            <input type="number"
+                                   step="any"
+                                   @bind="submissionNumericValue"
+                                   placeholder="Enter reading" />
+                        </div>
+                    }
+
+                    <div class="form-action">
+                        <button class="submit-reading-button"
+                                disabled="@submittingReading"
+                                @onclick="SubmitTelemetry">
+
+                            @if (submittingReading)
+                            {
+                                <span>Submitting...</span>
+                            }
+                            else
+                            {
+                                <span>Submit reading</span>
+                            }
+
+                        </button>
+                    </div>
+
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(submissionSuccess))
+                {
+                    <div class="submission-success">
+                        <strong>Reading accepted</strong>
+                        <span>@submissionSuccess</span>
+                    </div>
+                }
+
+                @if (!string.IsNullOrWhiteSpace(submissionError))
+                {
+                    <div class="submission-error">
+                        <strong>Unable to submit reading</strong>
+                        <span>@submissionError</span>
+                    </div>
+                }
 
             </section>
 
@@ -164,10 +331,21 @@
                         <label>Telemetry type</label>
 
                         <select @bind="selectedType">
-                            <option value="All">All types</option>
-                            <option value="Environmental">Environmental</option>
-                            <option value="Power">Power</option>
-                            <option value="Actuator">Actuator</option>
+                            <option value="All">
+                                All types
+                            </option>
+
+                            <option value="Environmental">
+                                Environmental
+                            </option>
+
+                            <option value="Power">
+                                Power
+                            </option>
+
+                            <option value="Actuator">
+                                Actuator
+                            </option>
                         </select>
                     </div>
 
@@ -175,7 +353,9 @@
                         <label>Metric</label>
 
                         <select @bind="selectedMetric">
-                            <option value="All">All metrics</option>
+                            <option value="All">
+                                All metrics
+                            </option>
 
                             @foreach (string metric in metricNames)
                             {
@@ -269,11 +449,15 @@
                                         <td>
                                             <div class="timestamp-cell">
                                                 <strong>
-                                                    @(row.TimestampUtc.ToLocalTime().ToString("HH:mm:ss"))
+                                                    @(row.TimestampUtc
+                                                        .ToLocalTime()
+                                                        .ToString("HH:mm:ss"))
                                                 </strong>
 
                                                 <span>
-                                                    @(row.TimestampUtc.ToLocalTime().ToString("dd MMM yyyy"))
+                                                    @(row.TimestampUtc
+                                                        .ToLocalTime()
+                                                        .ToString("dd MMM yyyy"))
                                                 </span>
                                             </div>
                                         </td>
@@ -309,19 +493,46 @@
 
     private List<TelemetryDisplayRow> allTelemetry = new();
     private List<string> metricNames = new();
+    private List<SensorRegistration> sensors = new();
+
+    private string submissionSensorId = string.Empty;
+
+    private string submissionType = "Float";
+
+    private string submissionMetric = "Soil Moisture";
+
+    private string submissionUnit = "%";
+
+    private double? submissionNumericValue;
+
+    private string submissionBooleanValue = "true";
+
+    private bool submittingReading;
+
+    private string? submissionSuccess;
+    private string? submissionError;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadTelemetry();
     }
 
-    private async Task LoadTelemetry()
+    private async Task LoadTelemetry(
+        bool showLoadingPanel = true)
     {
-        loading = true;
+        if (showLoadingPanel)
+        {
+            loading = true;
+        }
+
         errorMessage = null;
 
         try
         {
+            Task<List<SensorRegistration>?> sensorTask =
+                Http.GetFromJsonAsync<List<SensorRegistration>>(
+                    "api/sensors");
+
             Task<List<TelemetryPacket<float>>?> floatTask =
                 Http.GetFromJsonAsync<List<TelemetryPacket<float>>>(
                     "api/telemetry/float");
@@ -335,9 +546,20 @@
                     "api/telemetry/boolean");
 
             await Task.WhenAll(
+                sensorTask,
                 floatTask,
                 integerTask,
                 booleanTask);
+
+            sensors =
+                sensorTask.Result
+                ?? new List<SensorRegistration>();
+
+            sensors =
+                sensors
+                    .OrderBy(sensor =>
+                        sensor.DeviceIdentifier)
+                    .ToList();
 
             List<TelemetryPacket<float>> floatPackets =
                 floatTask.Result
@@ -355,59 +577,93 @@
             integerCount = integerPackets.Count;
             booleanCount = booleanPackets.Count;
 
-            allTelemetry = new List<TelemetryDisplayRow>();
+            allTelemetry =
+                new List<TelemetryDisplayRow>();
 
             allTelemetry.AddRange(
                 floatPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId = packet.SensorId,
-                        DeviceIdentifier = packet.DeviceIdentifier,
-                        TelemetryType = "Environmental",
-                        MetricName = packet.MetricName,
+                        SensorId =
+                            packet.SensorId,
+
+                        DeviceIdentifier =
+                            packet.DeviceIdentifier,
+
+                        TelemetryType =
+                            "Environmental",
+
+                        MetricName =
+                            packet.MetricName,
+
                         DisplayValue =
                             $"{packet.Value:F2} {packet.Unit}",
-                        TimestampUtc = packet.TimestampUtc
+
+                        TimestampUtc =
+                            packet.TimestampUtc
                     }));
 
             allTelemetry.AddRange(
                 integerPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId = packet.SensorId,
-                        DeviceIdentifier = packet.DeviceIdentifier,
-                        TelemetryType = "Power",
-                        MetricName = packet.MetricName,
+                        SensorId =
+                            packet.SensorId,
+
+                        DeviceIdentifier =
+                            packet.DeviceIdentifier,
+
+                        TelemetryType =
+                            "Power",
+
+                        MetricName =
+                            packet.MetricName,
+
                         DisplayValue =
                             $"{packet.Value:N0} {packet.Unit}",
-                        TimestampUtc = packet.TimestampUtc
+
+                        TimestampUtc =
+                            packet.TimestampUtc
                     }));
 
             allTelemetry.AddRange(
                 booleanPackets.Select(packet =>
                     new TelemetryDisplayRow
                     {
-                        SensorId = packet.SensorId,
-                        DeviceIdentifier = packet.DeviceIdentifier,
-                        TelemetryType = "Actuator",
-                        MetricName = packet.MetricName,
+                        SensorId =
+                            packet.SensorId,
+
+                        DeviceIdentifier =
+                            packet.DeviceIdentifier,
+
+                        TelemetryType =
+                            "Actuator",
+
+                        MetricName =
+                            packet.MetricName,
+
                         DisplayValue =
                             FormatBooleanValue(
                                 packet.MetricName,
                                 packet.Value),
-                        TimestampUtc = packet.TimestampUtc
+
+                        TimestampUtc =
+                            packet.TimestampUtc
                     }));
 
             allTelemetry =
                 allTelemetry
-                    .OrderByDescending(packet => packet.TimestampUtc)
+                    .OrderByDescending(
+                        packet => packet.TimestampUtc)
                     .ToList();
 
             metricNames =
                 allTelemetry
-                    .Select(packet => packet.MetricName)
+                    .Select(packet =>
+                        packet.MetricName)
                     .Distinct()
-                    .OrderBy(metric => metric)
+                    .OrderBy(metric =>
+                        metric)
                     .ToList();
         }
         catch (Exception ex)
@@ -421,7 +677,323 @@
         }
     }
 
-    private IEnumerable<TelemetryDisplayRow> FilteredTelemetry
+    private IEnumerable<SensorRegistration>
+        EligibleSubmissionSensors
+    {
+        get
+        {
+            IEnumerable<SensorRegistration> filteredSensors =
+                submissionType switch
+                {
+                    "Integer" =>
+                        sensors.Where(sensor =>
+                            sensor.Category ==
+                            SensorCategory.PowerConsumption),
+
+                    "Boolean" =>
+                        sensors.Where(sensor =>
+                            sensor.Category ==
+                            SensorCategory.Actuator),
+
+                    _ =>
+                        sensors.Where(sensor =>
+                            sensor.Category ==
+                            SensorCategory.Environmental)
+                };
+
+            return filteredSensors
+                .OrderBy(sensor =>
+                    sensor.DeviceIdentifier);
+        }
+    }
+
+    private List<string> AvailableSubmissionMetrics
+    {
+        get
+        {
+            return submissionType switch
+            {
+                "Integer" =>
+                    new List<string>
+                    {
+                        "Power Draw",
+                        "Energy Usage",
+                        "Flow Rate"
+                    },
+
+                "Boolean" =>
+                    new List<string>
+                    {
+                        "Valve State",
+                        "Pump State",
+                        "Relay State"
+                    },
+
+                _ =>
+                    new List<string>
+                    {
+                        "Soil Moisture",
+                        "Temperature",
+                        "Humidity"
+                    }
+            };
+        }
+    }
+
+    private void SubmissionTypeChanged(
+        ChangeEventArgs args)
+    {
+        submissionType =
+            args.Value?.ToString()
+            ?? "Float";
+
+        submissionSensorId =
+            string.Empty;
+
+        submissionNumericValue =
+            null;
+
+        submissionBooleanValue =
+            "true";
+
+        submissionSuccess =
+            null;
+
+        submissionError =
+            null;
+
+        if (submissionType == "Integer")
+        {
+            submissionMetric =
+                "Power Draw";
+
+            submissionUnit =
+                "W";
+        }
+        else if (submissionType == "Boolean")
+        {
+            submissionMetric =
+                "Valve State";
+
+            submissionUnit =
+                "State";
+        }
+        else
+        {
+            submissionMetric =
+                "Soil Moisture";
+
+            submissionUnit =
+                "%";
+        }
+    }
+
+    private void SubmissionMetricChanged(
+        ChangeEventArgs args)
+    {
+        submissionMetric =
+            args.Value?.ToString()
+            ?? string.Empty;
+
+        submissionUnit =
+            submissionMetric switch
+            {
+                "Soil Moisture" => "%",
+                "Temperature" => "°C",
+                "Humidity" => "%",
+
+                "Power Draw" => "W",
+                "Energy Usage" => "Wh",
+                "Flow Rate" => "L/h",
+
+                "Valve State" => "State",
+                "Pump State" => "State",
+                "Relay State" => "State",
+
+                _ => string.Empty
+            };
+
+        submissionSuccess =
+            null;
+
+        submissionError =
+            null;
+    }
+
+    private async Task SubmitTelemetry()
+    {
+        submissionSuccess = null;
+        submissionError = null;
+
+        if (!Guid.TryParse(
+            submissionSensorId,
+            out Guid sensorId))
+        {
+            submissionError =
+                "Please select a registered sensor.";
+
+            return;
+        }
+
+        SensorRegistration? sensor =
+            sensors.FirstOrDefault(
+                item => item.Id == sensorId);
+
+        if (sensor is null)
+        {
+            submissionError =
+                "The selected sensor could not be found.";
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+            submissionMetric))
+        {
+            submissionError =
+                "Please select a telemetry metric.";
+
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(
+            submissionUnit))
+        {
+            submissionError =
+                "Please provide the telemetry unit.";
+
+            return;
+        }
+
+        submittingReading = true;
+
+        try
+        {
+            HttpResponseMessage response;
+
+            if (submissionType == "Float")
+            {
+                if (!submissionNumericValue.HasValue)
+                {
+                    submissionError =
+                        "Please enter a numeric telemetry value.";
+
+                    return;
+                }
+
+                TelemetryPacket<float> packet =
+                    new(
+                        sensor.Id,
+                        sensor.DeviceIdentifier,
+                        submissionMetric,
+                        submissionUnit,
+                        (float)submissionNumericValue.Value);
+
+                response =
+                    await Http.PostAsJsonAsync(
+                        "api/telemetry/float",
+                        packet);
+            }
+            else if (submissionType == "Integer")
+            {
+                if (!submissionNumericValue.HasValue)
+                {
+                    submissionError =
+                        "Please enter a numeric telemetry value.";
+
+                    return;
+                }
+
+                double suppliedValue =
+                    submissionNumericValue.Value;
+
+                if (suppliedValue !=
+                    Math.Truncate(suppliedValue))
+                {
+                    submissionError =
+                        "Integer telemetry requires a whole-number value.";
+
+                    return;
+                }
+
+                if (suppliedValue < int.MinValue ||
+                    suppliedValue > int.MaxValue)
+                {
+                    submissionError =
+                        "The supplied integer value is outside the supported range.";
+
+                    return;
+                }
+
+                TelemetryPacket<int> packet =
+                    new(
+                        sensor.Id,
+                        sensor.DeviceIdentifier,
+                        submissionMetric,
+                        submissionUnit,
+                        (int)suppliedValue);
+
+                response =
+                    await Http.PostAsJsonAsync(
+                        "api/telemetry/integer",
+                        packet);
+            }
+            else
+            {
+                bool booleanValue =
+                    submissionBooleanValue == "true";
+
+                TelemetryPacket<bool> packet =
+                    new(
+                        sensor.Id,
+                        sensor.DeviceIdentifier,
+                        submissionMetric,
+                        submissionUnit,
+                        booleanValue);
+
+                response =
+                    await Http.PostAsJsonAsync(
+                        "api/telemetry/boolean",
+                        packet);
+            }
+
+            if (response.IsSuccessStatusCode)
+            {
+                submissionSuccess =
+                    $"{sensor.DeviceIdentifier} — {submissionMetric} " +
+                    "was accepted by the Smart-X gateway.";
+
+                submissionNumericValue =
+                    null;
+
+                await LoadTelemetry(
+                    showLoadingPanel: false);
+            }
+            else
+            {
+                string responseBody =
+                    await response.Content
+                        .ReadAsStringAsync();
+
+                submissionError =
+                    $"Gateway rejected the telemetry packet " +
+                    $"(HTTP {(int)response.StatusCode}). " +
+                    responseBody;
+            }
+        }
+        catch (Exception ex)
+        {
+            submissionError =
+                $"Telemetry submission failed: {ex.Message}";
+        }
+        finally
+        {
+            submittingReading = false;
+        }
+    }
+
+    private IEnumerable<TelemetryDisplayRow>
+        FilteredTelemetry
     {
         get
         {
@@ -452,7 +1024,8 @@
                             StringComparison.OrdinalIgnoreCase));
             }
 
-            if (!string.IsNullOrWhiteSpace(searchText))
+            if (!string.IsNullOrWhiteSpace(
+                searchText))
             {
                 query =
                     query.Where(row =>
@@ -471,9 +1044,14 @@
 
     private void ClearFilters()
     {
-        searchText = string.Empty;
-        selectedType = "All";
-        selectedMetric = "All";
+        searchText =
+            string.Empty;
+
+        selectedType =
+            "All";
+
+        selectedMetric =
+            "All";
     }
 
     private static string FormatBooleanValue(
@@ -504,7 +1082,6 @@
             "Environmental" => "environmental",
             "Power" => "power",
             "Actuator" => "actuator",
-
             _ => string.Empty
         };
     }
@@ -517,7 +1094,6 @@
             "Environmental" => "E",
             "Power" => "P",
             "Actuator" => "A",
-
             _ => "T"
         };
     }

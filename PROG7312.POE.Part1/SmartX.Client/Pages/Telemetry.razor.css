@@ -217,6 +217,161 @@
     border-top: 3px solid #56839b;
 }
 
+/* -------------------- INGESTION -------------------- */
+
+.ingestion-panel {
+    margin-top: 18px;
+    background: white;
+    border: 1px solid #dce1e5;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.receiver-status {
+    flex: 0 0 auto;
+    min-width: 125px;
+    padding: 9px 11px;
+    border-radius: 7px;
+    background: #edf8f2;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+.receiver-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #3ba96f;
+}
+
+.receiver-status strong,
+.receiver-status small {
+    display: block;
+}
+
+.receiver-status strong {
+    color: #28704b;
+    font-size: 10px;
+}
+
+.receiver-status small {
+    margin-top: 2px;
+    color: #79a18b;
+    font-size: 7px;
+}
+
+.ingestion-form {
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: minmax(160px, 1fr) minmax(220px, 1.5fr) minmax(155px, 1fr) minmax(90px, 0.6fr) minmax(130px, 0.8fr) max-content;
+    gap: 13px;
+    align-items: end;
+}
+
+.form-field {
+    min-width: 0;
+}
+
+    .form-field label {
+        display: block;
+        margin-bottom: 6px;
+        color: #66717a;
+        font-size: 9px;
+        font-weight: 700;
+    }
+
+    .form-field input,
+    .form-field select {
+        box-sizing: border-box;
+        display: block;
+        width: 100%;
+        min-width: 0;
+        height: 38px;
+        padding: 8px 10px;
+        border: 1px solid #d4dade;
+        border-radius: 6px;
+        background: white;
+        color: #17212b;
+        font-family: inherit;
+        font-size: 10px;
+        outline: none;
+    }
+
+        .form-field input:focus,
+        .form-field select:focus {
+            border-color: #6da5aa;
+            box-shadow: 0 0 0 3px rgba(15, 119, 129, 0.08);
+        }
+
+.form-action {
+    display: flex;
+    align-items: flex-end;
+}
+
+.submit-reading-button {
+    box-sizing: border-box;
+    height: 38px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 6px;
+    background: #0f7781;
+    color: white;
+    font-family: inherit;
+    font-size: 9px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+    .submit-reading-button:hover {
+        background: #0d6870;
+    }
+
+    .submit-reading-button:disabled {
+        opacity: 0.55;
+        cursor: default;
+    }
+
+.submission-success,
+.submission-error {
+    margin: 0 24px 18px;
+    padding: 11px 13px;
+    border-radius: 6px;
+}
+
+    .submission-success strong,
+    .submission-success span,
+    .submission-error strong,
+    .submission-error span {
+        display: block;
+    }
+
+    .submission-success strong,
+    .submission-error strong {
+        font-size: 9px;
+    }
+
+    .submission-success span,
+    .submission-error span {
+        margin-top: 3px;
+        font-size: 8px;
+    }
+
+.submission-success {
+    border: 1px solid #cce8d9;
+    background: #edf8f2;
+    color: #28704b;
+}
+
+.submission-error {
+    border: 1px solid #f0d0cc;
+    background: #fff0ee;
+    color: #a3443e;
+}
+
+/* -------------------- RECEIVED DATA -------------------- */
+
 .telemetry-panel {
     margin-top: 18px;
     background: white;
@@ -495,6 +650,18 @@
         margin-top: 5px;
     }
 
+/* -------------------- RESPONSIVE -------------------- */
+
+@media (max-width: 1250px) {
+    .ingestion-form {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .submit-reading-button {
+        width: 100%;
+    }
+}
+
 @media (max-width: 1150px) {
     .summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -506,6 +673,12 @@
 
     .clear-button {
         width: 100%;
+    }
+}
+
+@media (max-width: 850px) {
+    .ingestion-form {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -528,7 +701,8 @@
     }
 
     .summary-grid,
-    .filter-bar {
+    .filter-bar,
+    .ingestion-form {
         grid-template-columns: 1fr;
     }
 
@@ -537,6 +711,10 @@
     }
 
     .result-count {
+        align-self: flex-start;
+    }
+
+    .receiver-status {
         align-self: flex-start;
     }
 }
