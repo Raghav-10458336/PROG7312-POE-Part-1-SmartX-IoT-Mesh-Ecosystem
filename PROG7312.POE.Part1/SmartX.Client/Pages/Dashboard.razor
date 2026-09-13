@@ -1,0 +1,407 @@
+﻿@page "/dashboard"
+@using System.Net.Http.Json
+@using SmartX.Shared.Models
+@inject HttpClient Http
+
+<PageTitle>Smart-X | Telemetry Dashboard</PageTitle>
+
+<div class="dashboard-page">
+
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+            <div class="brand-mark">SX</div>
+            <div>
+                <strong>Smart-X</strong>
+                <span>IoT Mesh</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <span class="nav-label">WORKSPACE</span>
+
+            <a class="nav-item active" href="/dashboard">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </a>
+
+            <a class="nav-item" href="/sensors">
+                <span class="nav-icon">◉</span>
+                Sensors
+            </a>
+
+            <a class="nav-item" href="/telemetry">
+                <span class="nav-icon">⌁</span>
+                Telemetry
+            </a>
+
+            <a class="nav-item" href="/alerts">
+                <span class="nav-icon">!</span>
+                Attention Centre
+
+                @if (!loading && alertCount > 0)
+                {
+                    <span class="nav-count">@alertCount</span>
+                }
+            </a>
+
+            <span class="nav-label secondary-label">MANAGEMENT</span>
+
+            <a class="nav-item" href="/attachments">
+                <span class="nav-icon">□</span>
+                Attachments
+            </a>
+
+            <a class="nav-item" href="/deployment">
+                <span class="nav-icon">⌘</span>
+                Deployment Validation
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="sidebar-status">
+                <span class="status-dot"></span>
+                Gateway connected
+            </span>
+
+            <span>Part 1 Gateway</span>
+        </div>
+    </aside>
+
+    <div class="dashboard-main">
+
+        <header class="dashboard-header">
+            <div>
+                <span class="page-eyebrow">SENSOR DATA INGESTION &amp; TELEMETRY</span>
+                <h1>Operations Dashboard</h1>
+                <p>
+                    Monitor Smart-X field devices, telemetry activity
+                    and conditions requiring attention.
+                </p>
+            </div>
+
+            <div class="header-actions">
+                <a class="secondary-button" href="/">
+                    Back to gateway
+                </a>
+
+                <a class="primary-button" href="/sensors">
+                    + Register sensor
+                </a>
+            </div>
+        </header>
+
+        @if (loading)
+        {
+            <div class="loading-panel">
+                Loading Smart-X gateway statistics...
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="error-panel">
+                <strong>Gateway data unavailable</strong>
+                <span>@errorMessage</span>
+            </div>
+        }
+        else
+        {
+            <section class="summary-grid">
+
+                <div class="summary-card">
+                    <div class="summary-top">
+                        <span>Registered sensors</span>
+                        <span class="summary-icon">◉</span>
+                    </div>
+
+                    <strong>@sensorCount</strong>
+                    <small>Devices known to gateway</small>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-top">
+                        <span>Telemetry packets</span>
+                        <span class="summary-icon">⌁</span>
+                    </div>
+
+                    <strong>@telemetryCount.ToString("N0")</strong>
+                    <small>Seeded ingestion workload</small>
+                </div>
+
+                <div class="summary-card attention-card">
+                    <div class="summary-top">
+                        <span>Attention required</span>
+                        <span class="summary-icon alert-icon">!</span>
+                    </div>
+
+                    <strong>@alertCount</strong>
+                    <small>Detected telemetry anomalies</small>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-top">
+                        <span>Gateway status</span>
+                        <span class="summary-icon healthy-icon">●</span>
+                    </div>
+
+                    <strong class="healthy-text">Healthy</strong>
+                    <small>API communication online</small>
+                </div>
+
+            </section>
+
+            <section class="dashboard-grid">
+
+                <div class="panel sensor-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-eyebrow">DEVICE DISTRIBUTION</span>
+                            <h2>Registered sensor estate</h2>
+                        </div>
+
+                        <a href="/sensors">View sensors →</a>
+                    </div>
+
+                    <div class="category-list">
+
+                        <div class="category-row">
+                            <div class="category-left">
+                                <div class="category-icon environmental">E</div>
+
+                                <div>
+                                    <strong>Environmental</strong>
+                                    <span>Moisture, temperature and humidity</span>
+                                </div>
+                            </div>
+
+                            <span class="category-count">
+                                @environmentalCount
+                            </span>
+                        </div>
+
+                        <div class="category-row">
+                            <div class="category-left">
+                                <div class="category-icon power">P</div>
+
+                                <div>
+                                    <strong>Power Consumption</strong>
+                                    <span>Power draw, energy usage and flow</span>
+                                </div>
+                            </div>
+
+                            <span class="category-count">
+                                @powerCount
+                            </span>
+                        </div>
+
+                        <div class="category-row">
+                            <div class="category-left">
+                                <div class="category-icon actuator">A</div>
+
+                                <div>
+                                    <strong>Actuator</strong>
+                                    <span>Valves, pumps and relay states</span>
+                                </div>
+                            </div>
+
+                            <span class="category-count">
+                                @actuatorCount
+                            </span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="panel attention-panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-eyebrow danger-eyebrow">
+                                ATTENTION CENTRE
+                            </span>
+                            <h2>Telemetry requiring review</h2>
+                        </div>
+
+                        <a href="/alerts">Open centre →</a>
+                    </div>
+
+                    @if (recentAlerts.Count == 0)
+                    {
+                        <div class="empty-state">
+                            No telemetry anomalies have been detected.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert-list">
+
+                            @foreach (TelemetryAlert alert in recentAlerts)
+                            {
+                                <div class="alert-row">
+                                    <div class="severity-bar @GetSeverityClass(alert.Severity)"></div>
+
+                                    <div class="alert-content">
+                                        <div class="alert-heading">
+                                            <strong>@alert.MetricName</strong>
+                                            <span class="@GetSeverityClass(alert.Severity)">
+                                                @alert.Severity
+                                            </span>
+                                        </div>
+
+                                        <p>@alert.Message</p>
+
+                                        <div class="alert-meta">
+                                            <span>@alert.DeviceIdentifier</span>
+                                            <span>•</span>
+                                            <span>@alert.DetectedAtUtc.ToLocalTime().ToString("HH:mm:ss")</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            }
+
+                        </div>
+                    }
+                </div>
+
+            </section>
+
+            <section class="quick-actions">
+                <div class="quick-heading">
+                    <span class="panel-eyebrow">GATEWAY TOOLS</span>
+                    <h2>Common operations</h2>
+                </div>
+
+                <div class="quick-grid">
+
+                    <a class="quick-card" href="/sensors">
+                        <span class="quick-number">01</span>
+                        <h3>Register &amp; manage sensors</h3>
+                        <p>
+                            Create sensor profiles and manage deployment details.
+                        </p>
+                        <span class="quick-link">Open sensors →</span>
+                    </a>
+
+                    <a class="quick-card" href="/telemetry">
+                        <span class="quick-number">02</span>
+                        <h3>Inspect telemetry</h3>
+                        <p>
+                            Review environmental, power and actuator readings.
+                        </p>
+                        <span class="quick-link">Open telemetry →</span>
+                    </a>
+
+                    <a class="quick-card" href="/attachments">
+                        <span class="quick-number">03</span>
+                        <h3>Device attachments</h3>
+                        <p>
+                            Upload configuration files, logs and deployment media.
+                        </p>
+                        <span class="quick-link">Manage files →</span>
+                    </a>
+
+                    <a class="quick-card" href="/deployment">
+                        <span class="quick-number">04</span>
+                        <h3>Validate deployment</h3>
+                        <p>
+                            Validate nested Smart-X deployment structures.
+                        </p>
+                        <span class="quick-link">Run validation →</span>
+                    </a>
+
+                </div>
+            </section>
+        }
+
+    </div>
+</div>
+
+@code {
+    private bool loading = true;
+
+    private int sensorCount;
+    private int telemetryCount;
+    private int alertCount;
+
+    private int environmentalCount;
+    private int powerCount;
+    private int actuatorCount;
+
+    private string? errorMessage;
+
+    private List<TelemetryAlert> recentAlerts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<SensorRegistration>? sensors =
+                await Http.GetFromJsonAsync<List<SensorRegistration>>(
+                    "api/sensors");
+
+            TelemetryCountResponse? telemetryResponse =
+                await Http.GetFromJsonAsync<TelemetryCountResponse>(
+                    "api/telemetry/count");
+
+            AlertCountResponse? alertCountResponse =
+                await Http.GetFromJsonAsync<AlertCountResponse>(
+                    "api/alerts/count");
+
+            List<TelemetryAlert>? alerts =
+                await Http.GetFromJsonAsync<List<TelemetryAlert>>(
+                    "api/alerts");
+
+            sensors ??= new List<SensorRegistration>();
+            alerts ??= new List<TelemetryAlert>();
+
+            sensorCount = sensors.Count;
+            telemetryCount = telemetryResponse?.TotalPackets ?? 0;
+            alertCount = alertCountResponse?.TotalAlerts ?? 0;
+
+            environmentalCount =
+                sensors.Count(sensor =>
+                    sensor.Category == SmartX.Shared.Enums.SensorCategory.Environmental);
+
+            powerCount =
+                sensors.Count(sensor =>
+                    sensor.Category == SmartX.Shared.Enums.SensorCategory.PowerConsumption);
+
+            actuatorCount =
+                sensors.Count(sensor =>
+                    sensor.Category == SmartX.Shared.Enums.SensorCategory.Actuator);
+
+            recentAlerts =
+                alerts
+                    .OrderByDescending(alert => alert.DetectedAtUtc)
+                    .Take(4)
+                    .ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private static string GetSeverityClass(string severity)
+    {
+        return severity.Equals(
+            "Critical",
+            StringComparison.OrdinalIgnoreCase)
+                ? "critical"
+                : "warning";
+    }
+
+    private sealed class TelemetryCountResponse
+    {
+        public int TotalPackets { get; set; }
+    }
+
+    private sealed class AlertCountResponse
+    {
+        public int TotalAlerts { get; set; }
+    }
+
+    
+}
