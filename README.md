@@ -1,8 +1,6 @@
 # PROG7312 POE Part 1 Smart-X IoT Mesh Ecosystem
 PROG7312 POE Part 1: Smart-X IoT Mesh Ecosystem data ingestion, validation and telemetry management application built using .NET 10.
 
-## PROG7312 POE Part 1 — Data Ingestion and Validation Gateway
-
 **Student:** Raghav Mahraj  
 **Student Number:** ST10458336  
 
