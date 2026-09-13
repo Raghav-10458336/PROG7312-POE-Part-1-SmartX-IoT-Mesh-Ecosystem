@@ -20,7 +20,21 @@ namespace SmartX.Api
             builder.Services.AddSingleton<TelemetryAlertService>();
             builder.Services.AddSingleton<AttachmentStorageService>();
 
+
+            builder.Services.AddCors(options =>
+            {
+                options.AddPolicy("SmartXClientPolicy", policy =>
+                {
+                    policy
+                        .WithOrigins("https://localhost:7292")
+                        .AllowAnyHeader()
+                        .AllowAnyMethod();
+                });
+            });
+
             var app = builder.Build();
+
+
 
             using (IServiceScope scope = app.Services.CreateScope())
             {
@@ -40,6 +54,7 @@ namespace SmartX.Api
 
             app.UseAuthorization();
 
+            app.UseCors("SmartXClientPolicy");
 
             app.MapControllers();
 

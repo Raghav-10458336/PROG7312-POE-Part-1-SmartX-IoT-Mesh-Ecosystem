@@ -1,0 +1,52 @@
+﻿@using System.Net.Http.Json
+
+@page "/api-test"
+@inject HttpClient Http
+
+<h3>Smart-X API Connection Test</h3>
+
+@if (isLoading)
+{
+    <p>Checking API connection...</p>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <p>@errorMessage</p>
+}
+else
+{
+    <p>Connected successfully.</p>
+    <p>Total telemetry packets: @totalPackets</p>
+}
+
+@code {
+    private bool isLoading = true;
+    private string? errorMessage;
+    private int totalPackets;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            TelemetryCountResponse? response =
+                await Http.GetFromJsonAsync<TelemetryCountResponse>(
+                    "api/telemetry/count");
+
+            totalPackets = response?.TotalPackets ?? 0;
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"API connection failed: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private class TelemetryCountResponse
+    {
+        public int TotalPackets { get; set; }
+    }
+}
