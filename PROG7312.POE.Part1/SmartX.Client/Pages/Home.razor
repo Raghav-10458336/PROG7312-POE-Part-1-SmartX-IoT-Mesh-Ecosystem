@@ -1,7 +1,256 @@
 ﻿@page "/"
+@using System.Net.Http.Json
+@using SmartX.Shared.Models
+@inject HttpClient Http
 
-<PageTitle>Home</PageTitle>
+<PageTitle>Smart-X Gateway</PageTitle>
 
-<h1>Hello, world!</h1>
+<div class="smartx-page">
 
-Welcome to your new app.
+    <header class="topbar">
+        <div class="brand">
+            <div class="brand-mark">SX</div>
+
+            <div>
+                <h1>Smart-X</h1>
+                <span>IoT Mesh Ecosystem</span>
+            </div>
+        </div>
+
+        <div class="gateway-status @(apiConnected ? "online" : "offline")">
+            <span class="status-dot"></span>
+            @(apiConnected ? "Gateway Online" : "Gateway Offline")
+        </div>
+    </header>
+
+    <main class="page-content">
+
+        <section class="hero">
+            <div class="hero-copy">
+                <span class="eyebrow">SMART-X MANAGEMENT GATEWAY</span>
+
+                <h2>
+                    Distributed infrastructure.
+                    <br />
+                    One control point.
+                </h2>
+
+                <p>
+                    Monitor distributed sensor networks, inspect live telemetry,
+                    investigate abnormal readings and manage Smart-X deployments
+                    from one unified gateway.
+                </p>
+            </div>
+
+            <div class="system-overview">
+                <div class="overview-heading">
+                    <div>
+                        <span class="overview-label">SYSTEM OVERVIEW</span>
+                        <h3>Gateway activity</h3>
+                    </div>
+
+                    <span class="live-label">
+                        <span class="live-dot"></span>
+                        LIVE
+                    </span>
+                </div>
+
+                <div class="overview-grid">
+
+                    <div class="metric">
+                        <span>Registered sensors</span>
+
+                        @if (loading)
+                        {
+                            <strong>--</strong>
+                        }
+                        else
+                        {
+                            <strong>@sensorCount</strong>
+                        }
+                    </div>
+
+                    <div class="metric">
+                        <span>Telemetry packets</span>
+
+                        @if (loading)
+                        {
+                            <strong>--</strong>
+                        }
+                        else
+                        {
+                            <strong>@telemetryCount.ToString("N0")</strong>
+                        }
+                    </div>
+
+                    <div class="metric">
+                        <span>Gateway status</span>
+                        <strong class="healthy">
+                            @(apiConnected ? "Healthy" : "Unavailable")
+                        </strong>
+                    </div>
+
+                    <div class="metric">
+                        <span>Active module</span>
+                        <strong>01 / 03</strong>
+                    </div>
+
+                </div>
+
+                @if (!string.IsNullOrWhiteSpace(errorMessage))
+                {
+                    <div class="connection-warning">
+                        Gateway statistics could not be retrieved.
+                    </div>
+                }
+            </div>
+        </section>
+
+        <section class="modules-section">
+
+            <div class="section-heading">
+                <div>
+                    <span class="eyebrow">PLATFORM MODULES</span>
+                    <h2>Smart-X Operations</h2>
+                </div>
+
+                <p>
+                    Select an available management pillar to continue.
+                </p>
+            </div>
+
+            <div class="module-grid">
+
+                <a class="module-card active-card" href="/dashboard">
+                    <div class="module-top">
+                        <span class="module-number">01</span>
+                        <span class="module-state active-state">ACTIVE</span>
+                    </div>
+
+                    <div class="module-icon telemetry-icon">
+                        <span>⌁</span>
+                    </div>
+
+                    <h3>Sensor Data Ingestion &amp; Telemetry</h3>
+
+                    <p>
+                        Register field devices, inspect telemetry streams,
+                        identify abnormal readings and manage deployment data.
+                    </p>
+
+                    <div class="availability-note available-note">
+                        Available in Part 1
+                    </div>
+
+                    <div class="module-footer">
+                        <span>Open telemetry workspace</span>
+                        <span class="arrow">→</span>
+                    </div>
+                </a>
+
+                <div class="module-card disabled-card">
+                    <div class="module-top">
+                        <span class="module-number">02</span>
+                        <span class="module-state locked-state">PART 2</span>
+                    </div>
+
+                    <div class="module-icon">
+                        <span>⇄</span>
+                    </div>
+
+                    <h3>Real-Time Command Stream &amp; History</h3>
+
+                    <p>
+                        Device command execution, delivery tracking and
+                        historical command auditing.
+                    </p>
+
+                    <div class="availability-note unavailable-note">
+                        Unavailable in Part 1 — scheduled for Part 2
+                    </div>
+
+                    <div class="module-footer muted">
+                        <span>Module unavailable</span>
+                        <span>Locked</span>
+                    </div>
+                </div>
+
+                <div class="module-card disabled-card">
+                    <div class="module-top">
+                        <span class="module-number">03</span>
+                        <span class="module-state locked-state">FINAL POE</span>
+                    </div>
+
+                    <div class="module-icon">
+                        <span>⌬</span>
+                    </div>
+
+                    <h3>Network Topology &amp; Mesh Routing</h3>
+
+                    <p>
+                        Visualise Smart-X mesh relationships, node paths,
+                        network health and routing behaviour.
+                    </p>
+
+                    <div class="availability-note unavailable-note">
+                        Unavailable in Part 1 — scheduled for Final POE
+                    </div>
+
+                    <div class="module-footer muted">
+                        <span>Module unavailable</span>
+                        <span>Locked</span>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="page-footer">
+        <span>Smart-X IoT Mesh Ecosystem</span>
+        <span>Data Ingestion &amp; Validation Gateway</span>
+    </footer>
+
+</div>
+
+@code {
+    private bool loading = true;
+    private bool apiConnected;
+    private int sensorCount;
+    private int telemetryCount;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            List<SensorRegistration>? sensors =
+                await Http.GetFromJsonAsync<List<SensorRegistration>>(
+                    "api/sensors");
+
+            TelemetryCountResponse? telemetry =
+                await Http.GetFromJsonAsync<TelemetryCountResponse>(
+                    "api/telemetry/count");
+
+            sensorCount = sensors?.Count ?? 0;
+            telemetryCount = telemetry?.TotalPackets ?? 0;
+
+            apiConnected = true;
+        }
+        catch (Exception ex)
+        {
+            apiConnected = false;
+            errorMessage = ex.Message;
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private sealed class TelemetryCountResponse
+    {
+        public int TotalPackets { get; set; }
+    }
+}
