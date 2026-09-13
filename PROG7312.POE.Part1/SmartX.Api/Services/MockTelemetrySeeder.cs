@@ -1,25 +1,78 @@
-﻿using SmartX.Shared.Telemetry;
+﻿using SmartX.Shared.Enums;
+using SmartX.Shared.Models;
+using SmartX.Shared.Telemetry;
 
 namespace SmartX.Api.Services
 {
     public class MockTelemetrySeeder
     {
         private readonly TelemetryIngestionService _telemetryService;
+        private readonly SensorRegistryService _sensorRegistryService;
         private readonly Random _random = new();
 
-        public MockTelemetrySeeder(TelemetryIngestionService telemetryService)
+        public MockTelemetrySeeder(
+            TelemetryIngestionService telemetryService,
+            SensorRegistryService sensorRegistryService)
         {
             _telemetryService = telemetryService;
+            _sensorRegistryService = sensorRegistryService;
         }
 
         public void Seed()
         {
-            SeedFloatTelemetry();
-            SeedIntegerTelemetry();
-            SeedBooleanTelemetry();
+            Dictionary<string, SensorRegistration> sensors = SeedSensors();
+
+            SeedFloatTelemetry(sensors);
+            SeedIntegerTelemetry(sensors);
+            SeedBooleanTelemetry(sensors);
         }
 
-        private void SeedFloatTelemetry()
+        private Dictionary<string, SensorRegistration> SeedSensors()
+        {
+            Dictionary<string, SensorRegistration> sensors = new();
+
+            for (int i = 1; i <= 8; i++)
+            {
+                SensorRegistration environmentalSensor = new()
+                {
+                    DeviceIdentifier = $"ESP32-ENV-{i:D2}",
+                    DeploymentLocation = $"Hydroponic Zone {i}",
+                    Category = SensorCategory.Environmental
+                };
+
+                SensorRegistration powerSensor = new()
+                {
+                    DeviceIdentifier = $"ESP32-PWR-{i:D2}",
+                    DeploymentLocation = $"Utility Node {i}",
+                    Category = SensorCategory.PowerConsumption
+                };
+
+                SensorRegistration actuatorSensor = new()
+                {
+                    DeviceIdentifier = $"ESP32-ACT-{i:D2}",
+                    DeploymentLocation = $"Actuator Node {i}",
+                    Category = SensorCategory.Actuator
+                };
+
+                _sensorRegistryService.Register(environmentalSensor);
+                _sensorRegistryService.Register(powerSensor);
+                _sensorRegistryService.Register(actuatorSensor);
+
+                sensors[environmentalSensor.DeviceIdentifier] =
+                    environmentalSensor;
+
+                sensors[powerSensor.DeviceIdentifier] =
+                    powerSensor;
+
+                sensors[actuatorSensor.DeviceIdentifier] =
+                    actuatorSensor;
+            }
+
+            return sensors;
+        }
+
+        private void SeedFloatTelemetry(
+            Dictionary<string, SensorRegistration> sensors)
         {
             string[] metricNames =
             {
@@ -41,21 +94,30 @@ namespace SmartX.Api.Services
             for (int batchIndex = 0; batchIndex < batches.Length; batchIndex++)
             {
                 int batchSize = 300;
+
                 batches[batchIndex] =
                     new TelemetryPacket<float>[batchSize];
 
+                string deviceIdentifier =
+                    $"ESP32-ENV-{batchIndex + 1:D2}";
+
+                Guid sensorId =
+                    sensors[deviceIdentifier].Id;
+
                 for (int i = 0; i < batchSize; i++)
                 {
-                    int metricIndex = i % metricNames.Length;
+                    int metricIndex =
+                        i % metricNames.Length;
 
-                    float value = GenerateFloatValue(
-                        metricNames[metricIndex],
-                        i);
+                    float value =
+                        GenerateFloatValue(
+                            metricNames[metricIndex],
+                            i);
 
                     batches[batchIndex][i] =
                         new TelemetryPacket<float>(
-                            Guid.NewGuid(),
-                            $"ESP32-ENV-{batchIndex + 1:D2}",
+                            sensorId,
+                            deviceIdentifier,
                             metricNames[metricIndex],
                             units[metricIndex],
                             value);
@@ -65,13 +127,16 @@ namespace SmartX.Api.Services
             TelemetryBatch<TelemetryPacket<float>> telemetryBatch =
                 new(batches);
 
-            foreach (TelemetryPacket<float> packet in telemetryBatch.ToList())
+            foreach (
+                TelemetryPacket<float> packet
+                in telemetryBatch.ToList())
             {
                 _telemetryService.IngestFloat(packet);
             }
         }
 
-        private void SeedIntegerTelemetry()
+        private void SeedIntegerTelemetry(
+            Dictionary<string, SensorRegistration> sensors)
         {
             string[] metricNames =
             {
@@ -93,21 +158,30 @@ namespace SmartX.Api.Services
             for (int batchIndex = 0; batchIndex < batches.Length; batchIndex++)
             {
                 int batchSize = 250;
+
                 batches[batchIndex] =
                     new TelemetryPacket<int>[batchSize];
 
+                string deviceIdentifier =
+                    $"ESP32-PWR-{batchIndex + 1:D2}";
+
+                Guid sensorId =
+                    sensors[deviceIdentifier].Id;
+
                 for (int i = 0; i < batchSize; i++)
                 {
-                    int metricIndex = i % metricNames.Length;
+                    int metricIndex =
+                        i % metricNames.Length;
 
-                    int value = GenerateIntegerValue(
-                        metricNames[metricIndex],
-                        i);
+                    int value =
+                        GenerateIntegerValue(
+                            metricNames[metricIndex],
+                            i);
 
                     batches[batchIndex][i] =
                         new TelemetryPacket<int>(
-                            Guid.NewGuid(),
-                            $"ESP32-PWR-{batchIndex + 1:D2}",
+                            sensorId,
+                            deviceIdentifier,
                             metricNames[metricIndex],
                             units[metricIndex],
                             value);
@@ -117,13 +191,16 @@ namespace SmartX.Api.Services
             TelemetryBatch<TelemetryPacket<int>> telemetryBatch =
                 new(batches);
 
-            foreach (TelemetryPacket<int> packet in telemetryBatch.ToList())
+            foreach (
+                TelemetryPacket<int> packet
+                in telemetryBatch.ToList())
             {
                 _telemetryService.IngestInteger(packet);
             }
         }
 
-        private void SeedBooleanTelemetry()
+        private void SeedBooleanTelemetry(
+            Dictionary<string, SensorRegistration> sensors)
         {
             string[] metricNames =
             {
@@ -145,19 +222,28 @@ namespace SmartX.Api.Services
             for (int batchIndex = 0; batchIndex < batches.Length; batchIndex++)
             {
                 int batchSize = 200;
+
                 batches[batchIndex] =
                     new TelemetryPacket<bool>[batchSize];
 
+                string deviceIdentifier =
+                    $"ESP32-ACT-{batchIndex + 1:D2}";
+
+                Guid sensorId =
+                    sensors[deviceIdentifier].Id;
+
                 for (int i = 0; i < batchSize; i++)
                 {
-                    int metricIndex = i % metricNames.Length;
+                    int metricIndex =
+                        i % metricNames.Length;
 
-                    bool value = _random.Next(0, 2) == 1;
+                    bool value =
+                        _random.Next(0, 2) == 1;
 
                     batches[batchIndex][i] =
                         new TelemetryPacket<bool>(
-                            Guid.NewGuid(),
-                            $"ESP32-ACT-{batchIndex + 1:D2}",
+                            sensorId,
+                            deviceIdentifier,
                             metricNames[metricIndex],
                             units[metricIndex],
                             value);
@@ -167,13 +253,17 @@ namespace SmartX.Api.Services
             TelemetryBatch<TelemetryPacket<bool>> telemetryBatch =
                 new(batches);
 
-            foreach (TelemetryPacket<bool> packet in telemetryBatch.ToList())
+            foreach (
+                TelemetryPacket<bool> packet
+                in telemetryBatch.ToList())
             {
                 _telemetryService.IngestBoolean(packet);
             }
         }
 
-        private float GenerateFloatValue(string metricName, int index)
+        private float GenerateFloatValue(
+            string metricName,
+            int index)
         {
             return metricName switch
             {
@@ -196,7 +286,9 @@ namespace SmartX.Api.Services
             };
         }
 
-        private int GenerateIntegerValue(string metricName, int index)
+        private int GenerateIntegerValue(
+            string metricName,
+            int index)
         {
             return metricName switch
             {
