@@ -1,0 +1,572 @@
+﻿@page "/sensors"
+@using System.ComponentModel.DataAnnotations
+@using System.Net
+@using System.Net.Http.Json
+@using SmartX.Shared.Enums
+@using SmartX.Shared.Models
+@inject HttpClient Http
+
+<PageTitle>Smart-X | Sensors</PageTitle>
+
+<div class="sensors-page">
+
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+            <div class="brand-mark">SX</div>
+
+            <div>
+                <strong>Smart-X</strong>
+                <span>IoT Mesh</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <span class="nav-label">WORKSPACE</span>
+
+            <a class="nav-item" href="/dashboard">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </a>
+
+            <a class="nav-item active" href="/sensors">
+                <span class="nav-icon">◉</span>
+                Sensors
+            </a>
+
+            <a class="nav-item" href="/telemetry">
+                <span class="nav-icon">⌁</span>
+                Telemetry
+            </a>
+
+            <a class="nav-item" href="/alerts">
+                <span class="nav-icon">!</span>
+                Attention Centre
+            </a>
+
+            <span class="nav-label secondary-label">MANAGEMENT</span>
+
+            <a class="nav-item" href="/attachments">
+                <span class="nav-icon">□</span>
+                Attachments
+            </a>
+
+            <a class="nav-item" href="/deployment">
+                <span class="nav-icon">⌘</span>
+                Deployment Validation
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="sidebar-status">
+                <span class="status-dot"></span>
+                Gateway connected
+            </span>
+
+            <span>Part 1 Gateway</span>
+        </div>
+    </aside>
+
+    <main class="main-content">
+
+        <header class="page-header">
+            <div>
+                <span class="page-eyebrow">DEVICE MANAGEMENT</span>
+
+                <h1>Sensor Registry</h1>
+
+                <p>
+                    Register Smart-X field devices and manage deployment information.
+                </p>
+            </div>
+
+            <a class="back-button" href="/dashboard">
+                ← Dashboard
+            </a>
+        </header>
+
+        @if (!string.IsNullOrWhiteSpace(successMessage))
+        {
+            <div class="message success-message">
+                @successMessage
+            </div>
+        }
+
+        @if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="message error-message">
+                @errorMessage
+            </div>
+        }
+
+        <section class="content-grid">
+
+            <div class="registration-panel">
+
+                <div class="panel-heading">
+                    <span class="panel-eyebrow">NEW DEVICE</span>
+
+                    <h2>Register sensor</h2>
+
+                    <p>
+                        Add a field device to the Smart-X gateway registry.
+                    </p>
+                </div>
+
+                <EditForm Model="@newSensor"
+                          OnValidSubmit="@RegisterSensor">
+
+                    <DataAnnotationsValidator />
+
+                    <div class="form-group">
+                        <label>Device identifier</label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="newSensor.DeviceIdentifier"
+                                   placeholder="e.g. ESP32-ENV-09" />
+
+                        <ValidationMessage For="@(() => newSensor.DeviceIdentifier)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Deployment location</label>
+
+                        <InputText class="form-control"
+                                   @bind-Value="newSensor.DeploymentLocation"
+                                   placeholder="e.g. Hydroponic Zone 9" />
+
+                        <ValidationMessage For="@(() => newSensor.DeploymentLocation)" />
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sensor category</label>
+
+                        <InputSelect class="form-control"
+                                     @bind-Value="newSensor.Category">
+
+                            @foreach (SensorCategory category
+                                in Enum.GetValues<SensorCategory>())
+                            {
+                                <option value="@category">
+                                    @FormatCategory(category)
+                                </option>
+                            }
+
+                        </InputSelect>
+
+                        <ValidationMessage For="@(() => newSensor.Category)" />
+                    </div>
+
+                    <button type="submit"
+                            class="register-button"
+                            disabled="@submitting">
+
+                        @(submitting
+                            ? "Registering..."
+                            : "Register sensor")
+
+                    </button>
+
+                </EditForm>
+
+                <div class="registration-note">
+                    <strong>Required information</strong>
+
+                    <span>
+                        Each device requires a unique identifier,
+                        deployment location and sensor category.
+                    </span>
+                </div>
+
+            </div>
+
+            <div class="registry-panel">
+
+                <div class="registry-heading">
+                    <div>
+                        <span class="panel-eyebrow">DEVICE ESTATE</span>
+                        <h2>Registered sensors</h2>
+                    </div>
+
+                    <div class="sensor-total">
+                        @sensors.Count
+                        <span>devices</span>
+                    </div>
+                </div>
+
+                @if (loading)
+                {
+                    <div class="loading-state">
+                        Loading registered sensors...
+                    </div>
+                }
+                else if (sensors.Count == 0)
+                {
+                    <div class="loading-state">
+                        No sensors have been registered.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-wrapper">
+
+                        <table class="sensor-table">
+
+                            <thead>
+                                <tr>
+                                    <th>Device</th>
+                                    <th>Location</th>
+                                    <th>Category</th>
+                                    <th>Status</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+
+                                @foreach (SensorRegistration sensor in sensors)
+                                {
+                                    <tr>
+
+                                        <td>
+                                            <div class="device-cell">
+
+                                                <div class="device-icon">
+                                                    @GetCategoryLetter(sensor.Category)
+                                                </div>
+
+                                                <div>
+                                                    <strong>
+                                                        @sensor.DeviceIdentifier
+                                                    </strong>
+
+                                                    <span>
+                                                        @sensor.Id.ToString()[..8]
+                                                    </span>
+                                                </div>
+
+                                            </div>
+                                        </td>
+
+                                        <td>
+                                            @sensor.DeploymentLocation
+                                        </td>
+
+                                        <td>
+                                            <span class="category-badge @GetCategoryClass(sensor.Category)">
+                                                @FormatCategory(sensor.Category)
+                                            </span>
+                                        </td>
+
+                                        <td>
+                                            @if (sensor.IsActive)
+                                            {
+                                                <span class="status-badge active-status">
+                                                    Active
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="status-badge inactive-status">
+                                                    Inactive
+                                                </span>
+                                            }
+                                        </td>
+
+                                        <td class="action-cell">
+
+                                            <button class="delete-button"
+                                                    @onclick="() => ConfirmDelete(sensor)">
+                                                Delete
+                                            </button>
+
+                                        </td>
+
+                                    </tr>
+                                }
+
+                            </tbody>
+
+                        </table>
+
+                    </div>
+                }
+
+            </div>
+
+        </section>
+
+        @if (sensorPendingDelete is not null)
+        {
+            <div class="modal-backdrop">
+
+                <div class="confirm-modal">
+
+                    <div class="modal-icon">
+                        !
+                    </div>
+
+                    <h3>Delete sensor?</h3>
+
+                    <p>
+                        Are you sure you want to remove
+                        <strong>@sensorPendingDelete.DeviceIdentifier</strong>
+                        from the Smart-X registry?
+                    </p>
+
+                    <span class="modal-warning">
+                        This action cannot be undone.
+                    </span>
+
+                    <div class="modal-actions">
+
+                        <button class="cancel-button"
+                                @onclick="CancelDelete"
+                                disabled="@deleting">
+
+                            Cancel
+
+                        </button>
+
+                        <button class="confirm-delete-button"
+                                @onclick="DeleteConfirmed"
+                                disabled="@deleting">
+
+                            @(deleting
+                                ? "Deleting..."
+                                : "Delete sensor")
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </div>
+        }
+
+    </main>
+
+</div>
+
+@code {
+    private List<SensorRegistration> sensors = new();
+
+    private SensorRegistration newSensor =
+        CreateNewSensor();
+
+    private SensorRegistration? sensorPendingDelete;
+
+    private bool loading = true;
+    private bool submitting;
+    private bool deleting;
+
+    private string? successMessage;
+    private string? errorMessage;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSensors();
+    }
+
+    private async Task LoadSensors()
+    {
+        loading = true;
+
+        try
+        {
+            List<SensorRegistration>? response =
+                await Http.GetFromJsonAsync<List<SensorRegistration>>(
+                    "api/sensors");
+
+            sensors =
+                response?
+                    .OrderBy(sensor => sensor.DeviceIdentifier)
+                    .ToList()
+                ?? new List<SensorRegistration>();
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Unable to load sensor registry: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    private async Task RegisterSensor()
+    {
+        submitting = true;
+
+        successMessage = null;
+        errorMessage = null;
+
+        try
+        {
+            HttpResponseMessage response =
+                await Http.PostAsJsonAsync(
+                    "api/sensors",
+                    newSensor);
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage =
+                    $"{newSensor.DeviceIdentifier} registered successfully.";
+
+                newSensor =
+                    CreateNewSensor();
+
+                await LoadSensors();
+            }
+            else if (response.StatusCode
+                == HttpStatusCode.Conflict)
+            {
+                errorMessage =
+                    "A sensor with that device identifier already exists.";
+            }
+            else
+            {
+                errorMessage =
+                    $"Sensor registration failed. " +
+                    $"Gateway returned {(int)response.StatusCode}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Sensor registration failed: {ex.Message}";
+        }
+        finally
+        {
+            submitting = false;
+        }
+    }
+
+    private void ConfirmDelete(
+        SensorRegistration sensor)
+    {
+        successMessage = null;
+        errorMessage = null;
+
+        sensorPendingDelete =
+            sensor;
+    }
+
+    private void CancelDelete()
+    {
+        if (deleting)
+        {
+            return;
+        }
+
+        sensorPendingDelete =
+            null;
+    }
+
+    private async Task DeleteConfirmed()
+    {
+        if (sensorPendingDelete is null)
+        {
+            return;
+        }
+
+        deleting = true;
+
+        successMessage = null;
+        errorMessage = null;
+
+        SensorRegistration sensor =
+            sensorPendingDelete;
+
+        try
+        {
+            HttpResponseMessage response =
+                await Http.DeleteAsync(
+                    $"api/sensors/{sensor.Id}");
+
+            if (response.IsSuccessStatusCode)
+            {
+                successMessage =
+                    $"{sensor.DeviceIdentifier} removed from the registry.";
+
+                sensorPendingDelete =
+                    null;
+
+                await LoadSensors();
+            }
+            else
+            {
+                errorMessage =
+                    $"Unable to remove {sensor.DeviceIdentifier}.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage =
+                $"Delete operation failed: {ex.Message}";
+        }
+        finally
+        {
+            deleting = false;
+        }
+    }
+
+    private static SensorRegistration CreateNewSensor()
+    {
+        return new SensorRegistration
+        {
+            Category =
+                SensorCategory.Environmental
+        };
+    }
+
+    private static string FormatCategory(
+        SensorCategory category)
+    {
+        return category switch
+        {
+            SensorCategory.Environmental =>
+                "Environmental",
+
+            SensorCategory.PowerConsumption =>
+                "Power Consumption",
+
+            SensorCategory.Actuator =>
+                "Actuator",
+
+            _ => category.ToString()
+        };
+    }
+
+    private static string GetCategoryClass(
+        SensorCategory category)
+    {
+        return category switch
+        {
+            SensorCategory.Environmental =>
+                "environmental-category",
+
+            SensorCategory.PowerConsumption =>
+                "power-category",
+
+            SensorCategory.Actuator =>
+                "actuator-category",
+
+            _ => string.Empty
+        };
+    }
+
+    private static string GetCategoryLetter(
+        SensorCategory category)
+    {
+        return category switch
+        {
+            SensorCategory.Environmental => "E",
+            SensorCategory.PowerConsumption => "P",
+            SensorCategory.Actuator => "A",
+
+            _ => "S"
+        };
+    }
+}
