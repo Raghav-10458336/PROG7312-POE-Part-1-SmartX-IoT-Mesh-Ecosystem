@@ -20,6 +20,10 @@ namespace SmartX.Api
             builder.Services.AddSingleton<TelemetryAlertService>();
             builder.Services.AddSingleton<AttachmentStorageService>();
 
+            // Register telemetry queues and their background processor.
+            builder.Services.AddSingleton<TelemetryQueueService>();
+            builder.Services.AddHostedService<TelemetryProcessingWorker>();
+
 
             builder.Services.AddCors(options =>
             {

@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿
+using Microsoft.AspNetCore.Mvc;
 using SmartX.Api.Services;
 using SmartX.Shared.Telemetry;
 
@@ -11,22 +12,26 @@ namespace SmartX.Api.Controllers
         private const int MaximumTake = 1000;
 
         private readonly TelemetryIngestionService _telemetryService;
+        private readonly TelemetryQueueService _queueService;
 
         public TelemetryController(
-            TelemetryIngestionService telemetryService)
+            TelemetryIngestionService telemetryService,
+            TelemetryQueueService queueService)
         {
             _telemetryService = telemetryService;
+            _queueService = queueService;
         }
 
         [HttpPost("float")]
         public IActionResult IngestFloat(
             [FromBody] TelemetryPacket<float> packet)
         {
-            _telemetryService.IngestFloat(packet);
+            // Queue incoming float telemetry for background processing.
+            _queueService.EnqueueFloat(packet);
 
             return Accepted(new
             {
-                message = "Float telemetry packet accepted.",
+                message = "Float telemetry packet queued.",
                 packet
             });
         }
@@ -35,11 +40,12 @@ namespace SmartX.Api.Controllers
         public IActionResult IngestInteger(
             [FromBody] TelemetryPacket<int> packet)
         {
-            _telemetryService.IngestInteger(packet);
+            // Queue incoming integer telemetry for background processing.
+            _queueService.EnqueueInteger(packet);
 
             return Accepted(new
             {
-                message = "Integer telemetry packet accepted.",
+                message = "Integer telemetry packet queued.",
                 packet
             });
         }
@@ -48,11 +54,12 @@ namespace SmartX.Api.Controllers
         public IActionResult IngestBoolean(
             [FromBody] TelemetryPacket<bool> packet)
         {
-            _telemetryService.IngestBoolean(packet);
+            // Queue incoming boolean telemetry for background processing.
+            _queueService.EnqueueBoolean(packet);
 
             return Accepted(new
             {
-                message = "Boolean telemetry packet accepted.",
+                message = "Boolean telemetry packet queued.",
                 packet
             });
         }
