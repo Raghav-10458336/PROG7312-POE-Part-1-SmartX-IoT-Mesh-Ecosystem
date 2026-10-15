@@ -1,24 +1,25 @@
-﻿using SmartX.Shared.Models;
+﻿
+using SmartX.Shared.Models;
 using SmartX.Shared.Telemetry;
 
 namespace SmartX.Api.Services
 {
     public class TelemetryAlertService
     {
-        private readonly List<TelemetryAlert> _alerts =
-            new();
+        private readonly List<TelemetryAlert> _alerts = new();
 
-        private readonly object _alertLock =
-            new();
+        // Track unique faults that have not yet recovered.
+        private readonly HashSet<string> _activeFaults =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        private readonly object _alertLock = new();
 
         public IReadOnlyList<TelemetryAlert> GetAll()
         {
             lock (_alertLock)
             {
                 return _alerts
-                    .OrderByDescending(
-                        alert =>
-                            alert.DetectedAtUtc)
+                    .OrderByDescending(alert => alert.DetectedAtUtc)
                     .ToList()
                     .AsReadOnly();
             }
@@ -36,32 +37,25 @@ namespace SmartX.Api.Services
         {
             lock (_alertLock)
             {
-                return _alerts.Count(
-                    alert =>
-                        !alert.IsAcknowledged);
+                return _alerts.Count(alert => !alert.IsAcknowledged);
             }
         }
 
-        public TelemetryAlert? GetById(
-            Guid alertId)
+        public TelemetryAlert? GetById(Guid alertId)
         {
             lock (_alertLock)
             {
                 return _alerts.FirstOrDefault(
-                    alert =>
-                        alert.AlertId == alertId);
+                    alert => alert.AlertId == alertId);
             }
         }
 
-        public bool Acknowledge(
-            Guid alertId)
+        public bool Acknowledge(Guid alertId)
         {
             lock (_alertLock)
             {
-                TelemetryAlert? alert =
-                    _alerts.FirstOrDefault(
-                        item =>
-                            item.AlertId == alertId);
+                TelemetryAlert? alert = _alerts.FirstOrDefault(
+                    item => item.AlertId == alertId);
 
                 if (alert is null)
                 {
@@ -73,88 +67,79 @@ namespace SmartX.Api.Services
                     return true;
                 }
 
-                alert.IsAcknowledged =
-                    true;
-
-                alert.AcknowledgedAtUtc =
-                    DateTime.UtcNow;
+                alert.IsAcknowledged = true;
+                alert.AcknowledgedAtUtc = DateTime.UtcNow;
 
                 return true;
             }
         }
 
-        public void EvaluateFloat(
-            TelemetryPacket<float> packet)
+        public void EvaluateFloat(TelemetryPacket<float> packet)
         {
+            string? severity = null;
+            string? message = null;
+
             if (packet.MetricName == "Soil Moisture"
                 && packet.Value < 20)
             {
-                AddAlert(
-                    packet.DeviceIdentifier,
-                    packet.MetricName,
-                    "Critical",
-                    $"Soil moisture dropped to " +
-                    $"{packet.Value:F2}%.");
+                severity = "Critical";
+                message =
+                    $"Soil moisture dropped to {packet.Value:F2}%.";
             }
-            else if (
-                packet.MetricName == "Temperature"
+            else if (packet.MetricName == "Temperature"
                 && packet.Value > 38)
             {
-                AddAlert(
-                    packet.DeviceIdentifier,
-                    packet.MetricName,
-                    "Critical",
-                    $"Temperature increased to " +
-                    $"{packet.Value:F2} °C.");
+                severity = "Critical";
+                message =
+                    $"Temperature increased to {packet.Value:F2} °C.";
             }
-            else if (
-                packet.MetricName == "Humidity"
+            else if (packet.MetricName == "Humidity"
                 && packet.Value < 25)
             {
-                AddAlert(
-                    packet.DeviceIdentifier,
-                    packet.MetricName,
-                    "Warning",
-                    $"Humidity dropped to " +
-                    $"{packet.Value:F2}%.");
+                severity = "Warning";
+                message =
+                    $"Humidity dropped to {packet.Value:F2}%.";
             }
+
+            UpdateFaultState(
+                packet.DeviceIdentifier,
+                packet.MetricName,
+                severity,
+                message);
         }
 
-        public void EvaluateInteger(
-            TelemetryPacket<int> packet)
+        public void EvaluateInteger(TelemetryPacket<int> packet)
         {
+            string? severity = null;
+            string? message = null;
+
             if (packet.MetricName == "Power Draw"
                 && packet.Value > 4500)
             {
-                AddAlert(
-                    packet.DeviceIdentifier,
-                    packet.MetricName,
-                    "Critical",
-                    $"Power draw increased to " +
-                    $"{packet.Value:N0} W.");
+                severity = "Critical";
+                message =
+                    $"Power draw increased to {packet.Value:N0} W.";
             }
-            else if (
-                packet.MetricName == "Energy Usage"
+            else if (packet.MetricName == "Energy Usage"
                 && packet.Value > 5500)
             {
-                AddAlert(
-                    packet.DeviceIdentifier,
-                    packet.MetricName,
-                    "Warning",
-                    $"Energy usage increased to " +
-                    $"{packet.Value:N0} Wh.");
+                severity = "Warning";
+                message =
+                    $"Energy usage increased to {packet.Value:N0} Wh.";
             }
-            else if (
-                packet.MetricName == "Flow Rate"
+            else if (packet.MetricName == "Flow Rate"
                 && packet.Value > 350)
             {
-                AddAlert(
-                    packet.DeviceIdentifier,
-                    packet.MetricName,
-                    "Warning",
-                    $"Flow rate increased to " +
-                    $"{packet.Value:N0} L/h.");
+                severity = "Warning";
+                message =
+                    $"Flow rate increased to {packet.Value:N0} L/h.";
             }
+
+            UpdateFaultState(
+                packet.DeviceIdentifier,
+                packet.MetricName,
+                severity,
+                message);
         }
 
         public void EvaluateDisconnect(
@@ -164,108 +149,76 @@ namespace SmartX.Api.Services
             DateTime evaluationTimeUtc,
             TimeSpan disconnectThreshold)
         {
-            lock (_alertLock)
+            string? message = null;
+
+            if (!lastSeenUtc.HasValue)
             {
-                bool alreadyReported =
-                    _alerts.Any(
-                        alert =>
-                            alert.DeviceIdentifier.Equals(
-                                deviceIdentifier,
-                                StringComparison.OrdinalIgnoreCase)
-                            &&
-                            alert.MetricName.Equals(
-                                "Sensor Connectivity",
-                                StringComparison.OrdinalIgnoreCase));
-
-                if (alreadyReported)
-                {
-                    return;
-                }
-
-                if (!lastSeenUtc.HasValue)
-                {
-                    AddAlertUnsafe(
-                        deviceIdentifier,
-                        "Sensor Connectivity",
-                        "Critical",
-                        $"No telemetry has been received from " +
-                        $"{deviceIdentifier} at " +
-                        $"{deploymentLocation}.");
-
-                    return;
-                }
-
+                message =
+                    $"No telemetry has been received from " +
+                    $"{deviceIdentifier} at {deploymentLocation}.";
+            }
+            else
+            {
                 TimeSpan timeSinceLastTelemetry =
-                    evaluationTimeUtc -
-                    lastSeenUtc.Value;
+                    evaluationTimeUtc - lastSeenUtc.Value;
 
-                if (timeSinceLastTelemetry <=
-                    disconnectThreshold)
+                if (timeSinceLastTelemetry > disconnectThreshold)
                 {
-                    return;
-                }
-
-                int staleMinutes =
-                    Math.Max(
+                    int staleMinutes = Math.Max(
                         1,
                         (int)Math.Floor(
                             timeSinceLastTelemetry.TotalMinutes));
 
-                AddAlertUnsafe(
-                    deviceIdentifier,
-                    "Sensor Connectivity",
-                    "Critical",
-                    $"{deviceIdentifier} at " +
-                    $"{deploymentLocation} has not reported " +
-                    $"telemetry for approximately " +
-                    $"{staleMinutes} minutes.");
+                    message =
+                        $"{deviceIdentifier} at {deploymentLocation} " +
+                        $"has not reported telemetry for approximately " +
+                        $"{staleMinutes} minutes.";
+                }
             }
+
+            UpdateFaultState(
+                deviceIdentifier,
+                "Sensor Connectivity",
+                message is null ? null : "Critical",
+                message);
         }
 
-        private void AddAlert(
+        private void UpdateFaultState(
             string deviceIdentifier,
             string metricName,
-            string severity,
-            string message)
+            string? severity,
+            string? message)
         {
+            string faultKey =
+                $"{deviceIdentifier.Trim()}:{metricName.Trim()}";
+
             lock (_alertLock)
             {
-                AddAlertUnsafe(
-                    deviceIdentifier,
-                    metricName,
-                    severity,
-                    message);
+                if (severity is null || message is null)
+                {
+                    // A normal reading clears the active fault.
+                    _activeFaults.Remove(faultKey);
+                    return;
+                }
+
+                // HashSet.Add returns false for an existing fault.
+                if (!_activeFaults.Add(faultKey))
+                {
+                    return;
+                }
+
+                TelemetryAlert alert = new()
+                {
+                    DeviceIdentifier = deviceIdentifier,
+                    MetricName = metricName,
+                    Severity = severity,
+                    Message = message,
+                    DetectedAtUtc = DateTime.UtcNow,
+                    IsAcknowledged = false
+                };
+
+                _alerts.Add(alert);
             }
-        }
-
-        private void AddAlertUnsafe(
-            string deviceIdentifier,
-            string metricName,
-            string severity,
-            string message)
-        {
-            TelemetryAlert alert = new()
-            {
-                DeviceIdentifier =
-                    deviceIdentifier,
-
-                MetricName =
-                    metricName,
-
-                Severity =
-                    severity,
-
-                Message =
-                    message,
-
-                DetectedAtUtc =
-                    DateTime.UtcNow,
-
-                IsAcknowledged =
-                    false
-            };
-
-            _alerts.Add(alert);
         }
     }
 }
