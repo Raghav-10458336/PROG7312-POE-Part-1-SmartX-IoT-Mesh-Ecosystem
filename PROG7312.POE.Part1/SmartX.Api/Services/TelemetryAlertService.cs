@@ -41,6 +41,25 @@ namespace SmartX.Api.Services
             }
         }
 
+        public int GetActiveFaultCount()
+        {
+            lock (_alertLock)
+            {
+                return _activeFaults.Count;
+            }
+        }
+
+        public IReadOnlyList<string> GetActiveFaults()
+        {
+            lock (_alertLock)
+            {
+                return _activeFaults
+                    .OrderBy(fault => fault)
+                    .ToList()
+                    .AsReadOnly();
+            }
+        }
+
         public TelemetryAlert? GetById(Guid alertId)
         {
             lock (_alertLock)

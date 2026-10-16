@@ -35,6 +35,19 @@ namespace SmartX.Api.Controllers
             });
         }
 
+        [HttpGet("active")]
+        public IActionResult GetActiveFaults()
+        {
+            IReadOnlyList<string> faults =
+                _alertService.GetActiveFaults();
+
+            return Ok(new
+            {
+                totalActiveFaults = faults.Count,
+                faults
+            });
+        }
+
         [HttpPost("{alertId:guid}/acknowledge")]
         public IActionResult Acknowledge(
             Guid alertId)
