@@ -334,6 +334,34 @@
                                     </button>
                                 </div>
                             </div>
+
+                            <div class="actuator-row">
+                                <div>
+                                    <strong>Valve control</strong>
+                                    <small>
+                                        Current state:
+                                        <b class="@(valveState ? "state-on" : "state-off")">
+                                            @(valveState ? "OPEN" : "CLOSED")
+                                        </b>
+                                    </small>
+                                </div>
+
+                                <div class="actuator-buttons">
+                                    <button class="command-on @(valveState ? "command-selected-on" : "")"
+                                            aria-pressed="@valveState"
+                                            disabled="@(busy || !SelectedSensor.IsActive || valveState)"
+                                            @onclick='() => RequestCommand("Valve", true)'>
+                                        OPEN
+                                    </button>
+
+                                    <button class="command-off @(!valveState ? "command-selected-off" : "")"
+                                            aria-pressed="@(!valveState)"
+                                            disabled="@(busy || !SelectedSensor.IsActive || !valveState)"
+                                            @onclick='() => RequestCommand("Valve", false)'>
+                                        CLOSE
+                                    </button>
+                                </div>
+                            </div>
                         }
 
                         <p class="command-hint">
@@ -453,7 +481,7 @@
                 {
                     <div class="empty-state">
                         No commands are currently available in the undo stack.
-                        Execute a Pump or Relay command to begin.
+                        Execute a Pump, Relay or Valve command to begin.
                     </div>
                 }
                 else
@@ -475,8 +503,8 @@
                                     <tr @key="command.CommandId">
                                         <td>@command.DeviceIdentifier</td>
                                         <td>@command.CommandType</td>
-                                        <td>@(command.PreviousState ? "ON" : "OFF")</td>
-                                        <td>@(command.NewState ? "ON" : "OFF")</td>
+                                        <td>@StateLabel(command.CommandType, command.PreviousState)</td>
+                                        <td>@StateLabel(command.CommandType, command.NewState)</td>
                                         <td>
                                             @command.ExecutedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm:ss")
                                         </td>
@@ -523,7 +551,7 @@
 
                         <span>Restore state</span>
                         <strong>
-                            @(commands[0].PreviousState ? "ON" : "OFF")
+                            @StateLabel(commands[0].CommandType, commands[0].PreviousState)
                         </strong>
                     </div>
                 }
@@ -544,7 +572,7 @@
 
                     <span>Requested state</span>
                     <strong class="@(pendingNewState ? "state-on" : "state-off")">
-                        @(pendingNewState ? "ON" : "OFF")
+                        @StateLabel(pendingCommandType, pendingNewState)
                     </strong>
                 </div>
             }
@@ -826,6 +854,7 @@
 
     private bool pumpState;
     private bool relayState;
+    private bool valveState;
 
     private int selectionVersion;
 
@@ -958,7 +987,7 @@
         await LoadSelectedStates();
     }
 
-    // Load both states from the API for the selected device.
+    // Load all three actuator states from the API for the selected device.
     private async Task LoadSelectedStates()
     {
         int version = ++selectionVersion;
@@ -968,6 +997,7 @@
         stateLoading = true;
         pumpState = false;
         relayState = false;
+        valveState = false;
 
         try
         {
@@ -982,7 +1012,10 @@
             var relay = await Http.GetFromJsonAsync<ActuatorStateResponse>(
                 $"api/commands/state/{device}/Relay");
 
-            if (pump is null || relay is null)
+            var valve = await Http.GetFromJsonAsync<ActuatorStateResponse>(
+                $"api/commands/state/{device}/Valve");
+
+            if (pump is null || relay is null || valve is null)
                 throw new InvalidOperationException(
                     "The API returned an incomplete device state.");
 
@@ -993,6 +1026,7 @@
 
             pumpState = pump.IsOn;
             relayState = relay.IsOn;
+            valveState = valve.IsOn;
             statesAvailable = true;
         }
         catch (Exception ex)
@@ -1014,14 +1048,19 @@
             SelectedSensor is null || !SelectedSensor.IsActive)
             return;
 
-        if (commandType != "Pump" && commandType != "Relay")
+        if (commandType != "Pump" && commandType != "Relay" && commandType != "Valve")
         {
             actionError = "Unsupported command type.";
             return;
         }
 
-        bool currentState =
-            commandType == "Pump" ? pumpState : relayState;
+        bool currentState = commandType switch
+        {
+            "Pump" => pumpState,
+            "Relay" => relayState,
+            "Valve" => valveState,
+            _ => false
+        };
 
         if (currentState == newState)
             return;
@@ -1111,8 +1150,8 @@
             showConfirmation = false;
 
             successMessage =
-                $"{pendingCommandType} turned " +
-                $"{(pendingNewState ? "ON" : "OFF")} " +
+                $"{pendingCommandType} set to " +
+                $"{StateLabel(pendingCommandType, pendingNewState)} " +
                 $"for {pendingDevice}.";
 
             await RefreshAfterAction();
@@ -1268,6 +1307,12 @@
                 await InvokeAsync(StateHasChanged);
         }
     }
+
+    // Use valve-specific labels in history, confirmation and status messages.
+    private static string StateLabel(string commandType, bool state) =>
+        commandType.Equals("Valve", StringComparison.OrdinalIgnoreCase)
+            ? (state ? "OPEN" : "CLOSED")
+            : (state ? "ON" : "OFF");
 
     // Translate boolean sensor readings into clear operational states.
     private static string FormatTelemetryValue(string metric, string value,
