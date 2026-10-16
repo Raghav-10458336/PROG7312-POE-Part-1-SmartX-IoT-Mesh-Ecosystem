@@ -1,4 +1,5 @@
-﻿using SmartX.Shared.Telemetry;
+﻿
+using SmartX.Shared.Telemetry;
 
 namespace SmartX.Api.Services
 {
@@ -18,11 +19,14 @@ namespace SmartX.Api.Services
         private readonly object _booleanLock = new();
 
         private readonly TelemetryAlertService _alertService;
+        private readonly HistoricalTelemetryService _historyService;
 
         public TelemetryIngestionService(
-            TelemetryAlertService alertService)
+            TelemetryAlertService alertService,
+            HistoricalTelemetryService historyService)
         {
             _alertService = alertService;
+            _historyService = historyService;
         }
 
         public void IngestFloat(
@@ -33,6 +37,8 @@ namespace SmartX.Api.Services
                 _floatTelemetry.Add(packet);
             }
 
+            // Record processed telemetry in chronological history.
+            _historyService.AddFloat(packet);
             _alertService.EvaluateFloat(packet);
         }
 
@@ -44,6 +50,7 @@ namespace SmartX.Api.Services
                 _integerTelemetry.Add(packet);
             }
 
+            _historyService.AddInteger(packet);
             _alertService.EvaluateInteger(packet);
         }
 
@@ -54,6 +61,8 @@ namespace SmartX.Api.Services
             {
                 _booleanTelemetry.Add(packet);
             }
+
+            _historyService.AddBoolean(packet);
         }
 
         public IReadOnlyList<TelemetryPacket<float>>
@@ -100,25 +109,20 @@ namespace SmartX.Api.Services
 
             lock (_floatLock)
             {
-                floatCount =
-                    _floatTelemetry.Count;
+                floatCount = _floatTelemetry.Count;
             }
 
             lock (_integerLock)
             {
-                integerCount =
-                    _integerTelemetry.Count;
+                integerCount = _integerTelemetry.Count;
             }
 
             lock (_booleanLock)
             {
-                booleanCount =
-                    _booleanTelemetry.Count;
+                booleanCount = _booleanTelemetry.Count;
             }
 
-            return floatCount
-                 + integerCount
-                 + booleanCount;
+            return floatCount + integerCount + booleanCount;
         }
     }
 }

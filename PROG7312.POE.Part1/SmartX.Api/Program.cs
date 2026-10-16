@@ -24,6 +24,8 @@ namespace SmartX.Api
             builder.Services.AddSingleton<TelemetryQueueService>();
             builder.Services.AddHostedService<TelemetryProcessingWorker>();
 
+            builder.Services.AddSingleton<HistoricalTelemetryService>();
+
 
             builder.Services.AddCors(options =>
             {
