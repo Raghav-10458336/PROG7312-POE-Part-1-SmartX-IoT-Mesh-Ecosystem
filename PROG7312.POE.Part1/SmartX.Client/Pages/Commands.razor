@@ -1246,7 +1246,7 @@
                         continue;
 
                     all.Add(new TelemetryReading(device, metric,
-                        string.IsNullOrWhiteSpace(unit) ? value : $"{value} {unit}",
+                        FormatTelemetryValue(metric, value, unit, type),
                         type, recorded));
                 }
             }
@@ -1267,6 +1267,25 @@
             if (!telemetryCancellation.IsCancellationRequested)
                 await InvokeAsync(StateHasChanged);
         }
+    }
+
+    // Translate boolean sensor readings into clear operational states.
+    private static string FormatTelemetryValue(string metric, string value,
+        string unit, string type)
+    {
+        if (type.Equals("boolean", StringComparison.OrdinalIgnoreCase) &&
+            bool.TryParse(value, out bool enabled))
+        {
+            return metric.Trim().ToLowerInvariant() switch
+            {
+                "pump state" => enabled ? "Running" : "Stopped",
+                "valve state" => enabled ? "Open" : "Closed",
+                "relay state" => enabled ? "Enabled" : "Disabled",
+                _ => enabled ? "On" : "Off"
+            };
+        }
+
+        return string.IsNullOrWhiteSpace(unit) ? value : $"{value} {unit}";
     }
 
     private static string JsonText(JsonElement obj, string property)

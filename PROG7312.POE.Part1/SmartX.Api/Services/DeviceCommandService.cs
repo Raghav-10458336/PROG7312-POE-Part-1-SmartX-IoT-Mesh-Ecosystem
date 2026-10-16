@@ -16,6 +16,14 @@ namespace SmartX.Api.Services
 
         private readonly object _commandLock = new();
 
+        private static readonly HashSet<string> SupportedCommands =
+            new(StringComparer.OrdinalIgnoreCase)
+            {
+                "Pump",
+                "Relay",
+                "Valve"
+            };
+
         public DeviceCommandService(SensorRegistryService sensorRegistry)
         {
             _sensorRegistry = sensorRegistry;
@@ -35,10 +43,16 @@ namespace SmartX.Api.Services
             deviceIdentifier = deviceIdentifier.Trim();
             commandType = commandType.Trim();
 
-            if (commandType != "Pump" && commandType != "Relay")
+            if (!SupportedCommands.Contains(commandType))
             {
                 return null;
             }
+
+            // Use consistent names for command history and state keys.
+            commandType = SupportedCommands.First(
+                command => command.Equals(
+                    commandType,
+                    StringComparison.OrdinalIgnoreCase));
 
             lock (_commandLock)
             {
@@ -101,9 +115,17 @@ namespace SmartX.Api.Services
 
         public bool GetState(string deviceIdentifier, string commandType)
         {
+            if (string.IsNullOrWhiteSpace(deviceIdentifier) ||
+                string.IsNullOrWhiteSpace(commandType))
+            {
+                return false;
+            }
+
             lock (_commandLock)
             {
-                string stateKey = $"{deviceIdentifier}:{commandType}";
+                string stateKey =
+                    $"{deviceIdentifier.Trim()}:{commandType.Trim()}";
+
                 return _deviceStates.GetValueOrDefault(stateKey);
             }
         }
