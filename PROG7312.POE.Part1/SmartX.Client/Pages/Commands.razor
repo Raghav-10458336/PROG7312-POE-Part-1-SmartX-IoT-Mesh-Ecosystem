@@ -463,6 +463,31 @@
                 </p>
             </section>
 
+            <section class="panel command-recommendations-panel">
+                <div class="panel-heading">
+                    <div>
+                        <span class="panel-eyebrow">OPERATIONAL INSIGHTS</span>
+                        <h2>Suggested actions</h2>
+                    </div>
+                    <span class="command-counter">Rule-based guidance</span>
+                </div>
+                <p class="command-hint">
+                    Suggestions are based on recent gateway readings, unresolved faults
+                    and commands still in the undo stack. Nothing is executed automatically.
+                </p>
+                <div class="recommendation-grid">
+    @foreach (var suggestion in ActionSuggestions)
+    {
+        <div class="recommendation-card">
+            <span class="recommendation-category">@suggestion.Category</span>
+            <strong>@suggestion.Title</strong>
+            <p>@suggestion.Description</p>
+        </div>
+    }
+</div>
+                
+            </section>
+
             <section class="panel command-history-panel">
                 <div class="panel-heading">
                     <div>
@@ -812,7 +837,94 @@
     }
 </style>
 
+<style>
+    .recommendation-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 14px;
+        margin-top: 20px;
+    }
+
+    .recommendation-card {
+        border: 1px solid #dce7eb;
+        background: #f5f9fa;
+        border-radius: 10px;
+        padding: 18px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .recommendation-category {
+        font-size: 11px;
+        letter-spacing: .08em;
+        font-weight: 800;
+        color: #087b87;
+        text-transform: uppercase;
+    }
+
+    .recommendation-card strong {
+        font-size: 16px;
+        color: #1d2934;
+    }
+
+    .recommendation-card p {
+        margin: 0;
+        color: #65788c;
+        font-size: 13px;
+        line-height: 1.55;
+    }
+</style>
+
 @code {
+    private sealed record ActionSuggestion(string Category, string Title, string Description);
+
+    // Read-only rules: recommendations never send device commands.
+    private List<ActionSuggestion> ActionSuggestions
+    {
+        get
+        {
+            var result = new List<ActionSuggestion>();
+            var latest = telemetryReadings
+                .GroupBy(r => (r.DeviceIdentifier, r.MetricName))
+                .Select(g => g.OrderByDescending(r => r.TimestampUtc).First())
+                .ToList();
+
+            foreach (var reading in latest.Where(r =>
+                r.MetricName.Equals("Soil Moisture", StringComparison.OrdinalIgnoreCase)))
+            {
+                string numeric = reading.DisplayValue.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? "";
+                if (double.TryParse(numeric, System.Globalization.NumberStyles.Float,
+                    System.Globalization.CultureInfo.InvariantCulture, out double moisture) && moisture < 20)
+                {
+                    result.Add(new("Telemetry warning", $"Low soil moisture: {reading.DeviceIdentifier}",
+                        $"Latest sampled moisture is {moisture:0.#}%. Inspect irrigation and consider a manual pump override if appropriate."));
+                }
+            }
+
+            foreach (var fault in activeFaults.Take(3))
+            {
+                result.Add(new("Active fault", "Investigate device alert",
+                    $"Unresolved fault: {fault}. Check the Attention Centre before applying overrides."));
+            }
+
+            foreach (var group in commands.GroupBy(c =>
+                $"{c.DeviceIdentifier}:{c.CommandType}").Where(g => g.Count() >= 3).Take(2))
+            {
+                result.Add(new("Command pattern", "Repeated manual overrides",
+                    $"{group.Key} has {group.Count()} commands in the current undo stack. Review the device and its recent operating conditions."));
+            }
+
+            if (result.Count == 0)
+            {
+                result.Add(new("Status", "No immediate actions suggested",
+                    "No matching rules were triggered by the currently loaded recent packets, active faults or undoable commands. This is not a full health assessment."));
+            }
+
+            return result.Take(5).ToList();
+        }
+    }
+
     private readonly CancellationTokenSource telemetryCancellation = new();
     private Task? telemetryPollTask;
     private bool telemetryLoading;
