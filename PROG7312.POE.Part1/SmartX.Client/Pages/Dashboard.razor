@@ -17,7 +17,7 @@
         </a>
 
         <nav class="sidebar-nav">
-            <span class="nav-label">WORKSPACE</span>
+            <span class="nav-label">TELEMETRY WORKSPACE</span>
 
             <a class="nav-item active" href="/dashboard">
                 <span class="nav-icon">⌂</span>
@@ -55,6 +55,14 @@
                 <span class="nav-icon">⌘</span>
                 Deployment Validation
             </a>
+
+            <!-- Part 2 command workspace -->
+            <span class="nav-label secondary-label">COMMAND MANAGEMENT</span>
+
+            <a class="nav-item" href="/commands">
+                <span class="nav-icon">⇄</span>
+                Command Stream &amp; History
+            </a>
         </nav>
 
         <div class="sidebar-footer">
@@ -63,7 +71,7 @@
                 Gateway connected
             </span>
 
-            <span>Part 1 Gateway</span>
+            <span>Smart-X Part 2</span>
         </div>
     </aside>
 
@@ -71,8 +79,12 @@
 
         <header class="dashboard-header">
             <div>
-                <span class="page-eyebrow">SENSOR DATA INGESTION &amp; TELEMETRY</span>
+                <span class="page-eyebrow">
+                    SENSOR DATA INGESTION &amp; TELEMETRY
+                </span>
+
                 <h1>Operations Dashboard</h1>
+
                 <p>
                     Monitor Smart-X field devices, telemetry activity
                     and conditions requiring attention.
@@ -154,7 +166,9 @@
                 <div class="panel sensor-panel">
                     <div class="panel-heading">
                         <div>
-                            <span class="panel-eyebrow">DEVICE DISTRIBUTION</span>
+                            <span class="panel-eyebrow">
+                                DEVICE DISTRIBUTION
+                            </span>
                             <h2>Registered sensor estate</h2>
                         </div>
 
@@ -165,11 +179,15 @@
 
                         <div class="category-row">
                             <div class="category-left">
-                                <div class="category-icon environmental">E</div>
+                                <div class="category-icon environmental">
+                                    E
+                                </div>
 
                                 <div>
                                     <strong>Environmental</strong>
-                                    <span>Moisture, temperature and humidity</span>
+                                    <span>
+                                        Moisture, temperature and humidity
+                                    </span>
                                 </div>
                             </div>
 
@@ -180,11 +198,15 @@
 
                         <div class="category-row">
                             <div class="category-left">
-                                <div class="category-icon power">P</div>
+                                <div class="category-icon power">
+                                    P
+                                </div>
 
                                 <div>
                                     <strong>Power Consumption</strong>
-                                    <span>Power draw, energy usage and flow</span>
+                                    <span>
+                                        Power draw, energy usage and flow
+                                    </span>
                                 </div>
                             </div>
 
@@ -195,11 +217,15 @@
 
                         <div class="category-row">
                             <div class="category-left">
-                                <div class="category-icon actuator">A</div>
+                                <div class="category-icon actuator">
+                                    A
+                                </div>
 
                                 <div>
                                     <strong>Actuator</strong>
-                                    <span>Valves, pumps and relay states</span>
+                                    <span>
+                                        Valves, pumps and relay states
+                                    </span>
                                 </div>
                             </div>
 
@@ -217,6 +243,7 @@
                             <span class="panel-eyebrow danger-eyebrow">
                                 ATTENTION CENTRE
                             </span>
+
                             <h2>Telemetry requiring review</h2>
                         </div>
 
@@ -236,11 +263,13 @@
                             @foreach (TelemetryAlert alert in recentAlerts)
                             {
                                 <div class="alert-row">
-                                    <div class="severity-bar @GetSeverityClass(alert.Severity)"></div>
+                                    <div class="severity-bar @GetSeverityClass(alert.Severity)">
+                                    </div>
 
                                     <div class="alert-content">
                                         <div class="alert-heading">
                                             <strong>@alert.MetricName</strong>
+
                                             <span class="@GetSeverityClass(alert.Severity)">
                                                 @alert.Severity
                                             </span>
@@ -251,7 +280,9 @@
                                         <div class="alert-meta">
                                             <span>@alert.DeviceIdentifier</span>
                                             <span>•</span>
-                                            <span>@alert.DetectedAtUtc.ToLocalTime().ToString("HH:mm:ss")</span>
+                                            <span>
+                                                @alert.DetectedAtUtc.ToLocalTime().ToString("HH:mm:ss")
+                                            </span>
                                         </div>
                                     </div>
                                 </div>
@@ -273,38 +304,66 @@
 
                     <a class="quick-card" href="/sensors">
                         <span class="quick-number">01</span>
+
                         <h3>Register &amp; manage sensors</h3>
+
                         <p>
                             Create sensor profiles and manage deployment details.
                         </p>
+
                         <span class="quick-link">Open sensors →</span>
                     </a>
 
                     <a class="quick-card" href="/telemetry">
                         <span class="quick-number">02</span>
+
                         <h3>Inspect telemetry</h3>
+
                         <p>
                             Review environmental, power and actuator readings.
                         </p>
+
                         <span class="quick-link">Open telemetry →</span>
                     </a>
 
                     <a class="quick-card" href="/attachments">
                         <span class="quick-number">03</span>
+
                         <h3>Device attachments</h3>
+
                         <p>
                             Upload configuration files, logs and deployment media.
                         </p>
+
                         <span class="quick-link">Manage files →</span>
                     </a>
 
                     <a class="quick-card" href="/deployment">
                         <span class="quick-number">04</span>
+
                         <h3>Validate deployment</h3>
+
                         <p>
                             Validate nested Smart-X deployment structures.
                         </p>
+
                         <span class="quick-link">Run validation →</span>
+                    </a>
+
+                    <!-- Part 2 navigation -->
+                    <a class="quick-card" href="/commands">
+                        <span class="quick-number">05</span>
+
+                        <h3>Command Stream &amp; History</h3>
+
+                        <p>
+                            Execute Pump and Relay overrides, review device
+                            states and undo recent commands.
+                        </p>
+
+                        <span class="quick-link">
+                            Open command workspace →
+                        </span>
                     </a>
 
                 </div>
@@ -358,15 +417,18 @@
 
             environmentalCount =
                 sensors.Count(sensor =>
-                    sensor.Category == SmartX.Shared.Enums.SensorCategory.Environmental);
+                    sensor.Category ==
+                    SmartX.Shared.Enums.SensorCategory.Environmental);
 
             powerCount =
                 sensors.Count(sensor =>
-                    sensor.Category == SmartX.Shared.Enums.SensorCategory.PowerConsumption);
+                    sensor.Category ==
+                    SmartX.Shared.Enums.SensorCategory.PowerConsumption);
 
             actuatorCount =
                 sensors.Count(sensor =>
-                    sensor.Category == SmartX.Shared.Enums.SensorCategory.Actuator);
+                    sensor.Category ==
+                    SmartX.Shared.Enums.SensorCategory.Actuator);
 
             recentAlerts =
                 alerts
@@ -402,6 +464,4 @@
     {
         public int TotalAlerts { get; set; }
     }
-
-    
 }

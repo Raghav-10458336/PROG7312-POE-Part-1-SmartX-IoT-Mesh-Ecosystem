@@ -1,0 +1,411 @@
+﻿
+/* Smart-X shared workspace layout */
+
+.dashboard-page {
+    min-height: 100vh;
+    width: 100%;
+    background: #f3f5f7;
+    color: #17212b;
+    font-family: Inter, "Segoe UI", Arial, sans-serif;
+    display: grid;
+    grid-template-columns: 230px minmax(0, 1fr);
+}
+
+    .dashboard-page,
+    .dashboard-page *,
+    .dashboard-page *::before,
+    .dashboard-page *::after {
+        box-sizing: border-box;
+    }
+
+        .dashboard-page .sidebar {
+            min-height: 100vh;
+            height: 100vh;
+            position: sticky;
+            top: 0;
+            display: flex;
+            flex-direction: column;
+            padding: 24px 17px;
+            background: #111820;
+            color: #d5dce2;
+            overflow-y: auto;
+        }
+
+        .dashboard-page .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 0 8px 25px;
+            color: white;
+            text-decoration: none;
+            border-bottom: 1px solid #27313b;
+        }
+
+        .dashboard-page .brand-mark {
+            width: 38px;
+            height: 38px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 8px;
+            background: #0f7781;
+            color: white;
+            font-size: 13px;
+            font-weight: 800;
+        }
+
+        .dashboard-page .sidebar-brand strong {
+            display: block;
+            color: white;
+            font-size: 16px;
+        }
+
+        .dashboard-page .sidebar-brand span {
+            display: block;
+            margin-top: 4px;
+            color: #84919d;
+            font-size: 10px;
+        }
+
+        .dashboard-page .sidebar-nav {
+            display: flex;
+            flex-direction: column;
+            margin-top: 27px;
+        }
+
+        .dashboard-page .nav-label {
+            display: block;
+            padding: 0 11px 8px;
+            color: #687581;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .12em;
+        }
+
+        .dashboard-page .secondary-label {
+            margin-top: 27px;
+        }
+
+        .dashboard-page .nav-item {
+            min-height: 43px;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            margin-bottom: 4px;
+            padding: 10px 11px;
+            border-radius: 7px;
+            color: #aeb8c1;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+            .dashboard-page .nav-item:hover {
+                background: #18232d;
+                color: white;
+            }
+
+            .dashboard-page .nav-item.active {
+                background: #17343a;
+                color: #d9f1f2;
+            }
+
+        .dashboard-page .nav-icon {
+            width: 20px;
+            flex-shrink: 0;
+            text-align: center;
+            font-size: 15px;
+        }
+
+        .dashboard-page .nav-count {
+            margin-left: auto;
+            padding: 3px 6px;
+            border-radius: 12px;
+            background: #9d3d3d;
+            color: white;
+            font-size: 9px;
+        }
+
+        .dashboard-page .sidebar-footer {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            margin-top: auto;
+            padding: 18px 10px 2px;
+            border-top: 1px solid #27313b;
+            color: #687581;
+            font-size: 10px;
+        }
+
+        .dashboard-page .sidebar-status {
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            color: #9eabb5;
+        }
+
+        .dashboard-page .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: #3bb273;
+        }
+
+        .dashboard-page .dashboard-main {
+            min-width: 0;
+            padding: 40px 48px 60px;
+        }
+
+        .dashboard-page .dashboard-header {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 30px;
+            padding-bottom: 30px;
+            border-bottom: 1px solid #dbe0e4;
+        }
+
+        .dashboard-page .page-eyebrow,
+        .dashboard-page .panel-eyebrow {
+            color: #0f7781;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: .13em;
+        }
+
+        .dashboard-page .dashboard-header h1 {
+            margin: 7px 0 6px;
+            color: #17212b;
+            font-size: 31px;
+            font-weight: 800;
+            letter-spacing: -.03em;
+        }
+
+        .dashboard-page .dashboard-header p {
+            margin: 0;
+            color: #727d87;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .dashboard-page .header-actions {
+            display: flex;
+            gap: 9px;
+            flex-shrink: 0;
+        }
+
+        .dashboard-page .primary-button,
+        .dashboard-page .secondary-button {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 14px;
+            border-radius: 7px;
+            text-decoration: none;
+            font-family: inherit;
+            font-size: 11px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .dashboard-page .primary-button {
+            background: #0f7781;
+            color: white;
+            border: 1px solid #0f7781;
+        }
+
+            .dashboard-page .primary-button:hover {
+                background: #0c6871;
+                color: white;
+            }
+
+        .dashboard-page .secondary-button {
+            background: white;
+            color: #56616c;
+            border: 1px solid #d5dce1;
+        }
+
+            .dashboard-page .secondary-button:hover {
+                background: #f6f8f9;
+            }
+
+        .dashboard-page button:disabled {
+            opacity: .5;
+            cursor: not-allowed;
+        }
+
+        .dashboard-page .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 25px;
+        }
+
+        .dashboard-page .summary-card {
+            min-width: 0;
+            padding: 18px;
+            background: white;
+            border: 1px solid #dce1e5;
+            border-radius: 9px;
+        }
+
+        .dashboard-page .summary-top {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            color: #78838d;
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .dashboard-page .summary-icon {
+            width: 27px;
+            height: 27px;
+            flex-shrink: 0;
+            display: grid;
+            place-items: center;
+            border-radius: 6px;
+            background: #edf3f4;
+            color: #0f7781;
+        }
+
+        .dashboard-page .healthy-icon {
+            background: #ebf7f0;
+            color: #2e8a59;
+        }
+
+        .dashboard-page .alert-icon {
+            background: #fff0ee;
+            color: #b84b44;
+        }
+
+        .dashboard-page .summary-card > strong {
+            display: block;
+            margin-top: 14px;
+            color: #17212b;
+            font-size: 27px;
+            font-weight: 800;
+            letter-spacing: -.03em;
+        }
+
+        .dashboard-page .summary-card small {
+            display: block;
+            margin-top: 5px;
+            color: #949da5;
+            font-size: 10px;
+        }
+
+        .dashboard-page .attention-card {
+            border-left: 3px solid #c65b50;
+        }
+
+        .dashboard-page .panel {
+            min-width: 0;
+            padding: 22px;
+            background: white;
+            border: 1px solid #dce1e5;
+            border-radius: 10px;
+        }
+
+        .dashboard-page .panel-heading {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 14px;
+            padding-bottom: 17px;
+            border-bottom: 1px solid #edf0f2;
+        }
+
+            .dashboard-page .panel-heading h2 {
+                margin: 5px 0 0;
+                color: #17212b;
+                font-size: 17px;
+                font-weight: 700;
+            }
+
+        .dashboard-page .loading-panel,
+        .dashboard-page .error-panel {
+            margin-top: 25px;
+            padding: 22px;
+            background: white;
+            border: 1px solid #dce1e5;
+            border-radius: 9px;
+            color: #727d87;
+            font-size: 12px;
+        }
+
+        .dashboard-page .error-panel {
+            border-left: 3px solid #ba4e48;
+        }
+
+            .dashboard-page .error-panel strong,
+            .dashboard-page .error-panel span {
+                display: block;
+            }
+
+        .dashboard-page .empty-state {
+            padding: 45px 12px;
+            color: #939ca4;
+            text-align: center;
+            font-size: 11px;
+        }
+
+        /* Preserve the telemetry dashboard's existing layouts */
+
+        .dashboard-page .dashboard-grid {
+            display: grid;
+            grid-template-columns: .9fr 1.1fr;
+            gap: 18px;
+            margin-top: 18px;
+        }
+
+        .dashboard-page .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 14px;
+        }
+
+/* Responsive workspace */
+
+@media (max-width: 1100px) {
+    .dashboard-page .summary-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-page .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dashboard-page .quick-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 760px) {
+    .dashboard-page {
+        display: block;
+    }
+
+        .dashboard-page .sidebar {
+            display: none;
+        }
+
+        .dashboard-page .dashboard-main {
+            padding: 28px 20px 45px;
+        }
+
+        .dashboard-page .dashboard-header {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+
+        .dashboard-page .header-actions {
+            flex-wrap: wrap;
+        }
+
+        .dashboard-page .summary-grid,
+        .dashboard-page .quick-grid {
+            grid-template-columns: 1fr;
+        }
+}

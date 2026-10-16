@@ -1,0 +1,371 @@
+.loading-panel,
+.error-panel {
+    margin-top: 25px;
+    padding: 22px;
+    background: white;
+    border: 1px solid #dce1e5;
+    border-radius: 9px;
+    color: #727d87;
+    font-size: 12px;
+}
+
+.error-panel {
+    border-left: 3px solid #ba4e48;
+}
+
+    .error-panel strong,
+    .error-panel span {
+        display: block;
+    }
+
+    .error-panel span {
+        margin-top: 5px;
+    }
+
+@media (max-width: 1100px) {
+    .summary-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .dashboard-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .quick-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 760px) {
+    .dashboard-page {
+        display: block;
+    }
+
+    .sidebar {
+        display: none;
+    }
+
+    .dashboard-main {
+        padding: 28px 20px 45px;
+    }
+
+    .dashboard-header {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .summary-grid,
+    .quick-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+
+/* Command Stream & History: module-specific components */
+.dashboard-page {
+    box-sizing: border-box;
+}
+
+    .dashboard-page *, .dashboard-page *::before, .dashboard-page *::after {
+        box-sizing: border-box;
+    }
+
+.dashboard-main {
+    min-width: 0;
+}
+
+.sidebar {
+    overflow-y: auto;
+}
+
+.header-actions button {
+    cursor: pointer;
+    font-family: inherit;
+}
+
+    .header-actions button:disabled, .command-history-panel button:disabled {
+        opacity: .5;
+        cursor: not-allowed;
+    }
+
+.command-workspace-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+    gap: 18px;
+    margin-top: 18px;
+}
+
+    .command-workspace-grid .panel, .command-history-panel {
+        min-width: 0;
+    }
+
+.command-history-panel {
+    margin-top: 18px;
+}
+
+.command-counter {
+    color: #0f7781;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.command-filters {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 18px 0 12px;
+}
+
+    .command-filters input {
+        grid-column: 1 / -1;
+    }
+
+.command-input {
+    width: 100%;
+    min-width: 0;
+    padding: 11px 12px;
+    border: 1px solid #dce1e5;
+    border-radius: 7px;
+    background: #fff;
+    color: #17212b;
+    font: 12px Inter, 'Segoe UI', Arial, sans-serif;
+}
+
+    .command-input:focus {
+        outline: 2px solid #0f7781;
+        outline-offset: 1px;
+    }
+
+.command-device-list {
+    max-height: 385px;
+    overflow-y: auto;
+}
+
+.command-device-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 14px 12px;
+    border: 1px solid transparent;
+    border-bottom-color: #edf0f2;
+    background: #fff;
+    text-align: left;
+    cursor: pointer;
+    color: #17212b;
+    font: inherit;
+}
+
+    .command-device-row:hover {
+        background: #f7fafb;
+    }
+
+    .command-device-row.selected {
+        border-color: #0f7781;
+        border-radius: 7px;
+        background: #edf7f7;
+    }
+
+    .command-device-row strong {
+        display: block;
+        font-size: 12px;
+    }
+
+    .command-device-row small, .actuator-row small {
+        display: block;
+        margin-top: 5px;
+        color: #788797;
+        font-size: 10px;
+    }
+
+.command-device-status {
+    color: #287c53;
+    font-size: 10px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.selected-device-card {
+    padding: 18px;
+    border: 1px solid #dce9eb;
+    border-radius: 9px;
+    background: #f4f9fa;
+    margin: 18px 0 8px;
+}
+
+    .selected-device-card h3 {
+        margin: 8px 0 5px;
+        font-size: 18px;
+    }
+
+    .selected-device-card p, .selected-device-card > span:last-child {
+        display: block;
+        color: #718092;
+        font-size: 11px;
+        margin: 5px 0;
+    }
+
+.actuator-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 19px 0;
+    border-bottom: 1px solid #edf0f2;
+}
+
+    .actuator-row strong {
+        font-size: 12px;
+    }
+
+.actuator-buttons {
+    display: flex;
+    gap: 7px;
+}
+
+    .actuator-buttons button {
+        padding: 9px 14px;
+        border-radius: 7px;
+        border: 1px solid #dce1e5;
+        font: 700 11px Inter, 'Segoe UI', Arial, sans-serif;
+        cursor: pointer;
+    }
+
+.command-on {
+    color: #087f67;
+    background: #eaf7f1;
+}
+
+.command-off {
+    color: #ad4141;
+    background: #fff0f0;
+}
+
+.actuator-buttons button:hover:not(:disabled) {
+    filter: brightness(.96);
+}
+
+.actuator-buttons button:disabled {
+    opacity: .45;
+    cursor: not-allowed;
+}
+
+.command-hint {
+    color: #788797;
+    font-size: 10px;
+    line-height: 1.6;
+    margin-top: 18px;
+}
+
+.command-notice {
+    margin-top: 18px;
+    padding: 13px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+}
+
+    .command-notice.success {
+        background: #eaf7f1;
+        color: #087f67;
+    }
+
+    .command-notice.failure {
+        background: #fff0f0;
+        color: #ad4141;
+    }
+
+.command-table-wrap {
+    overflow-x: auto;
+}
+
+.command-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 11px;
+}
+
+    .command-table th, .command-table td {
+        padding: 14px 12px;
+        border-bottom: 1px solid #edf0f2;
+        white-space: nowrap;
+    }
+
+    .command-table th {
+        color: #718092;
+        font-weight: 700;
+    }
+
+.command-history-panel .secondary-button {
+    cursor: pointer;
+    font-family: inherit;
+}
+
+@media (max-width: 1100px) {
+    .command-workspace-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 600px) {
+    .command-filters {
+        grid-template-columns: 1fr;
+    }
+
+        .command-filters input {
+            grid-column: auto;
+        }
+
+    .actuator-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .command-history-panel .panel-heading {
+        gap: 12px;
+        flex-direction: column;
+    }
+}
+
+/* Consistent interactive and responsive refinements */
+.dashboard-page {
+    width: 100%;
+}
+
+    .dashboard-page button {
+        font-family: inherit;
+    }
+
+        .dashboard-page a:focus-visible,
+        .dashboard-page button:focus-visible,
+        .dashboard-page input:focus-visible,
+        .dashboard-page select:focus-visible {
+            outline: 2px solid #0f7781;
+            outline-offset: 2px;
+        }
+
+    .dashboard-page .sidebar-brand:focus-visible,
+    .dashboard-page .nav-item:focus-visible {
+        outline-color: #82d4d9;
+    }
+
+.command-history-panel .panel-heading {
+    gap: 14px;
+    align-items: center;
+}
+
+.command-history-panel .secondary-button {
+    white-space: nowrap;
+}
+
+@media (max-width: 760px) {
+    .dashboard-main {
+        padding: 28px 20px 45px;
+    }
+
+    .header-actions {
+        flex-wrap: wrap;
+    }
+}

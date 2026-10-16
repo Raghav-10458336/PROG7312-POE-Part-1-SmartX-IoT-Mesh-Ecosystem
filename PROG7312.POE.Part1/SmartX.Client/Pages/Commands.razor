@@ -1,0 +1,990 @@
+﻿@page "/commands"
+@using System.Net.Http.Json
+@using SmartX.Shared.Models
+@using SmartX.Shared.Enums
+@inject HttpClient Http
+
+<PageTitle>Smart-X | Command Stream &amp; History</PageTitle>
+
+<div class="dashboard-page">
+    <aside class="sidebar">
+        <a class="sidebar-brand" href="/">
+            <div class="brand-mark">SX</div>
+            <div>
+                <strong>Smart-X</strong>
+                <span>IoT Mesh</span>
+            </div>
+        </a>
+
+        <nav class="sidebar-nav">
+            <span class="nav-label">TELEMETRY WORKSPACE</span>
+
+            <a class="nav-item" href="/dashboard">
+                <span class="nav-icon">⌂</span> Dashboard
+            </a>
+
+            <a class="nav-item" href="/sensors">
+                <span class="nav-icon">◉</span> Sensors
+            </a>
+
+            <a class="nav-item" href="/telemetry">
+                <span class="nav-icon">⌁</span> Telemetry
+            </a>
+
+            <a class="nav-item" href="/alerts">
+                <span class="nav-icon">!</span> Attention Centre
+            </a>
+
+            <span class="nav-label secondary-label">MANAGEMENT</span>
+
+            <a class="nav-item" href="/attachments">
+                <span class="nav-icon">□</span> Attachments
+            </a>
+
+            <a class="nav-item" href="/deployment">
+                <span class="nav-icon">⌘</span> Deployment Validation
+            </a>
+
+            <span class="nav-label secondary-label">COMMAND MANAGEMENT</span>
+
+            <a class="nav-item active" href="/commands">
+                <span class="nav-icon">⇄</span>
+                Command Stream &amp; History
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <span class="sidebar-status">
+                <span class="status-dot"></span>
+                Smart-X Gateway
+            </span>
+            <span>Smart-X Part 2</span>
+        </div>
+    </aside>
+
+    <main class="dashboard-main">
+        <header class="dashboard-header">
+            <div>
+                <span class="page-eyebrow">
+                    REAL-TIME COMMAND STREAM &amp; HISTORY
+                </span>
+                <h1>Command Operations</h1>
+                <p>
+                    Monitor registered devices, execute actuator overrides
+                    and review operational command history.
+                </p>
+            </div>
+
+            <div class="header-actions">
+                <a class="secondary-button" href="/">Back to gateway</a>
+
+                <button class="primary-button"
+                        disabled="@(busy || loading || stateLoading)"
+                        @onclick="LoadData">
+                    Refresh workspace
+                </button>
+            </div>
+        </header>
+
+        @if (loading)
+        {
+            <div class="loading-panel">
+                Loading command management workspace...
+            </div>
+        }
+        else if (!string.IsNullOrWhiteSpace(errorMessage))
+        {
+            <div class="error-panel">
+                <strong>Workspace data unavailable</strong>
+                <span>@errorMessage</span>
+                <button class="secondary-button" @onclick="LoadData">
+                    Try again
+                </button>
+            </div>
+        }
+        else
+        {
+            <section class="summary-grid">
+                <div class="summary-card">
+                    <div class="summary-top">
+                        <span>Registered devices</span>
+                        <span class="summary-icon">◉</span>
+                    </div>
+                    <strong>@sensors.Count</strong>
+                    <small>Devices in the gateway registry</small>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-top">
+                        <span>Active devices</span>
+                        <span class="summary-icon healthy-icon">●</span>
+                    </div>
+                    <strong>@sensors.Count(s => s.IsActive)</strong>
+                    <small>Available for command execution</small>
+                </div>
+
+                <div class="summary-card">
+                    <div class="summary-top">
+                        <span>Undoable commands</span>
+                        <span class="summary-icon">⇄</span>
+                    </div>
+                    <strong>@commands.Count</strong>
+                    <small>Current command stack</small>
+                </div>
+
+                <div class="summary-card attention-card">
+                    <div class="summary-top">
+                        <span>Active faults</span>
+                        <span class="summary-icon alert-icon">!</span>
+                    </div>
+                    <strong>@activeFaults.Count</strong>
+                    <small>Unique unresolved device faults</small>
+                </div>
+            </section>
+
+            @if (!string.IsNullOrWhiteSpace(successMessage))
+            {
+                <div class="command-notice success" role="status">
+                    @successMessage
+                </div>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(actionError))
+            {
+                <div class="command-notice failure" role="alert">
+                    @actionError
+                </div>
+            }
+
+            <section class="command-workspace-grid">
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-eyebrow">DEVICE MANAGEMENT</span>
+                            <h2>Registered device stream</h2>
+                        </div>
+
+                        <span class="command-counter">
+                            @FilteredSensors.Count() devices
+                        </span>
+                    </div>
+
+                    <div class="command-filters">
+                        <input class="command-input"
+                               placeholder="Search device or location..."
+                               aria-label="Search devices"
+                               @bind="searchText"
+                               @bind:event="oninput"
+                               @bind:after="AutoSelectSingleMatch" />
+
+                        <select class="command-input"
+                                aria-label="Filter by category"
+                                @bind="categoryFilter"
+                                @bind:after="AutoSelectSingleMatch">
+                            <option value="All">All categories</option>
+                            @foreach (SensorCategory category in
+                                Enum.GetValues<SensorCategory>())
+                            {
+                                <option value="@category">@category</option>
+                            }
+                        </select>
+
+                        <select class="command-input"
+                                aria-label="Filter by status"
+                                @bind="statusFilter"
+                                @bind:after="AutoSelectSingleMatch">
+                            <option value="All">All devices</option>
+                            <option value="Active">Active only</option>
+                            <option value="Inactive">Inactive only</option>
+                            <option value="Faults">With active faults</option>
+                        </select>
+                    </div>
+
+                    <div class="command-device-list">
+                        @if (!FilteredSensors.Any())
+                        {
+                            <div class="empty-state">
+                                No devices match the selected filters.
+                            </div>
+                        }
+                        else
+                        {
+                            @foreach (SensorRegistration sensor in FilteredSensors)
+                            {
+                                <button @key="sensor.DeviceIdentifier"
+                                        class="command-device-row @(selectedDevice == sensor.DeviceIdentifier ? "selected" : "")"
+                                        disabled="@(busy || stateLoading)"
+                                        @onclick="() => SelectDevice(sensor.DeviceIdentifier)">
+                                    <span>
+                                        <strong>@sensor.DeviceIdentifier</strong>
+                                        <small>
+                                            @sensor.Category · @sensor.DeploymentLocation
+                                        </small>
+                                    </span>
+
+                                    <span class="command-device-status">
+                                        @(sensor.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </button>
+                            }
+                        }
+                    </div>
+
+                    <p class="command-hint">
+                        A single matching device is selected automatically.
+                        For multiple matches, click a device to control it.
+                    </p>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div>
+                            <span class="panel-eyebrow">MANUAL OVERRIDE</span>
+                            <h2>Actuator control</h2>
+                        </div>
+                    </div>
+
+                    @if (SelectedSensor is null)
+                    {
+                        <div class="empty-state">
+                            Select a registered device to manage its controls.
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="selected-device-card">
+                            <span class="panel-eyebrow">SELECTED DEVICE</span>
+                            <h3>@SelectedSensor.DeviceIdentifier</h3>
+                            <p>@SelectedSensor.DeploymentLocation</p>
+                            <span>
+                                @SelectedSensor.Category ·
+                                @(SelectedSensor.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </div>
+
+                        @if (stateLoading)
+                        {
+                            <div class="loading-panel">
+                                Loading selected device states...
+                            </div>
+                        }
+                        else if (!statesAvailable)
+                        {
+                            <div class="command-notice failure">
+                                Device states could not be verified.
+                                Refresh the workspace before issuing commands.
+                            </div>
+                        }
+                        else
+                        {
+                            <div class="actuator-row">
+                                <div>
+                                    <strong>Pump control</strong>
+                                    <small>
+                                        Current state:
+                                        <b class="@(pumpState ? "state-on" : "state-off")">
+                                            @(pumpState ? "ON" : "OFF")
+                                        </b>
+                                    </small>
+                                </div>
+
+                                <div class="actuator-buttons">
+                                    <button class="command-on @(pumpState ? "command-selected-on" : "")"
+                                            aria-pressed="@pumpState"
+                                            disabled="@(busy || !SelectedSensor.IsActive || pumpState)"
+                                            @onclick='() => RequestCommand("Pump", true)'>
+                                        ON
+                                    </button>
+
+                                    <button class="command-off @(!pumpState ? "command-selected-off" : "")"
+                                            aria-pressed="@(!pumpState)"
+                                            disabled="@(busy || !SelectedSensor.IsActive || !pumpState)"
+                                            @onclick='() => RequestCommand("Pump", false)'>
+                                        OFF
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div class="actuator-row">
+                                <div>
+                                    <strong>Relay control</strong>
+                                    <small>
+                                        Current state:
+                                        <b class="@(relayState ? "state-on" : "state-off")">
+                                            @(relayState ? "ON" : "OFF")
+                                        </b>
+                                    </small>
+                                </div>
+
+                                <div class="actuator-buttons">
+                                    <button class="command-on @(relayState ? "command-selected-on" : "")"
+                                            aria-pressed="@relayState"
+                                            disabled="@(busy || !SelectedSensor.IsActive || relayState)"
+                                            @onclick='() => RequestCommand("Relay", true)'>
+                                        ON
+                                    </button>
+
+                                    <button class="command-off @(!relayState ? "command-selected-off" : "")"
+                                            aria-pressed="@(!relayState)"
+                                            disabled="@(busy || !SelectedSensor.IsActive || !relayState)"
+                                            @onclick='() => RequestCommand("Relay", false)'>
+                                        OFF
+                                    </button>
+                                </div>
+                            </div>
+                        }
+
+                        <p class="command-hint">
+                            Commands update simulated actuator states through
+                            the Smart-X API. No physical hardware is controlled.
+                        </p>
+                    }
+                </div>
+            </section>
+
+            <section class="panel command-history-panel">
+                <div class="panel-heading">
+                    <div>
+                        <span class="panel-eyebrow">COMMAND HISTORY</span>
+                        <h2>Recent commands</h2>
+                    </div>
+
+                    <button class="secondary-button"
+                            disabled="@(busy || stateLoading || commands.Count == 0)"
+                            @onclick="RequestUndo">
+                        ↶ Undo latest command
+                    </button>
+                </div>
+
+                @if (commands.Count == 0)
+                {
+                    <div class="empty-state">
+                        No commands are currently available in the undo stack.
+                        Execute a Pump or Relay command to begin.
+                    </div>
+                }
+                else
+                {
+                    <div class="command-table-wrap">
+                        <table class="command-table">
+                            <thead>
+                                <tr>
+                                    <th>Device</th>
+                                    <th>Command</th>
+                                    <th>Previous</th>
+                                    <th>New</th>
+                                    <th>Executed</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (CommandRecord command in commands)
+                                {
+                                    <tr @key="command.CommandId">
+                                        <td>@command.DeviceIdentifier</td>
+                                        <td>@command.CommandType</td>
+                                        <td>@(command.PreviousState ? "ON" : "OFF")</td>
+                                        <td>@(command.NewState ? "ON" : "OFF")</td>
+                                        <td>
+                                            @command.ExecutedAtUtc.ToLocalTime().ToString("dd MMM yyyy HH:mm:ss")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </section>
+        }
+    </main>
+</div>
+
+@if (showConfirmation)
+{
+    <div class="command-modal-backdrop"
+         role="presentation">
+        <div class="command-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="command-confirm-title">
+
+            <span class="panel-eyebrow">SAFETY CONFIRMATION</span>
+            <h2 id="command-confirm-title">
+                @(pendingUndo ? "Undo latest command?" : "Confirm manual override")
+            </h2>
+
+            @if (pendingUndo)
+            {
+                <p>
+                    This will reverse the most recent command in the
+                    command stack.
+                </p>
+
+                @if (commands.Count > 0)
+                {
+                    <div class="command-confirm-details">
+                        <span>Device</span>
+                        <strong>@commands[0].DeviceIdentifier</strong>
+
+                        <span>Control</span>
+                        <strong>@commands[0].CommandType</strong>
+
+                        <span>Restore state</span>
+                        <strong>
+                            @(commands[0].PreviousState ? "ON" : "OFF")
+                        </strong>
+                    </div>
+                }
+            }
+            else
+            {
+                <p>
+                    Verify the selected device and requested state
+                    before executing this command.
+                </p>
+
+                <div class="command-confirm-details">
+                    <span>Device</span>
+                    <strong>@pendingDevice</strong>
+
+                    <span>Control</span>
+                    <strong>@pendingCommandType</strong>
+
+                    <span>Requested state</span>
+                    <strong class="@(pendingNewState ? "state-on" : "state-off")">
+                        @(pendingNewState ? "ON" : "OFF")
+                    </strong>
+                </div>
+            }
+
+            <div class="command-modal-actions">
+                <button class="secondary-button"
+                        disabled="@busy"
+                        @onclick="CancelConfirmation">
+                    Cancel
+                </button>
+
+                <button class="primary-button"
+                        disabled="@busy"
+                        @onclick="ConfirmAction">
+                    @(busy ? "Processing..." : "Confirm action")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<style>
+    .command-selected-on {
+        background: #087f56 !important;
+        border-color: #087f56 !important;
+        color: #fff !important;
+        opacity: 1 !important;
+    }
+
+    .command-selected-off {
+        background: #b44343 !important;
+        border-color: #b44343 !important;
+        color: #fff !important;
+        opacity: 1 !important;
+    }
+
+    .state-on {
+        color: #087f56;
+    }
+
+    .state-off {
+        color: #b44343;
+    }
+
+    .command-modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        background: rgba(12, 20, 29, .68);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    .command-modal {
+        width: min(100%, 460px);
+        max-height: 90vh;
+        overflow-y: auto;
+        background: white;
+        border: 1px solid #dce1e5;
+        border-radius: 12px;
+        padding: 28px;
+        box-shadow: 0 24px 70px rgba(0, 0, 0, .22);
+        font-family: Inter, "Segoe UI", Arial, sans-serif;
+        color: #17212b;
+    }
+
+    .command-modal h2 {
+        font-size: 23px;
+        margin: 12px 0;
+    }
+
+    .command-modal p {
+        color: #727d87;
+        font-size: 13px;
+        line-height: 1.6;
+    }
+
+    .command-confirm-details {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+        background: #f3f7f8;
+        border: 1px solid #dce9eb;
+        border-radius: 8px;
+        padding: 18px;
+        margin-top: 20px;
+        font-size: 12px;
+    }
+
+    .command-confirm-details span {
+        color: #727d87;
+    }
+
+    .command-confirm-details strong {
+        text-align: right;
+        overflow-wrap: anywhere;
+    }
+
+    .command-modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 24px;
+    }
+
+    .command-modal-actions button {
+        cursor: pointer;
+    }
+
+    .command-modal-actions button:disabled {
+        opacity: .55;
+        cursor: not-allowed;
+    }
+</style>
+
+@code {
+    private bool loading = true;
+    private bool busy;
+    private bool stateLoading;
+    private bool statesAvailable;
+
+    private bool showConfirmation;
+    private bool pendingUndo;
+    private bool pendingNewState;
+
+    private string pendingDevice = "";
+    private string pendingCommandType = "";
+
+    private string? errorMessage;
+    private string? actionError;
+    private string? successMessage;
+
+    private string searchText = "";
+    private string categoryFilter = "All";
+    private string statusFilter = "All";
+    private string? selectedDevice;
+
+    private bool pumpState;
+    private bool relayState;
+
+    private int selectionVersion;
+
+    private List<SensorRegistration> sensors = new();
+    private List<CommandRecord> commands = new();
+    private List<string> activeFaults = new();
+
+    private SensorRegistration? SelectedSensor =>
+        sensors.FirstOrDefault(s =>
+            string.Equals(s.DeviceIdentifier, selectedDevice,
+                StringComparison.OrdinalIgnoreCase));
+
+    // Search by identifier or deployment location.
+    private IEnumerable<SensorRegistration> FilteredSensors =>
+        sensors.Where(sensor =>
+            (string.IsNullOrWhiteSpace(searchText) ||
+             sensor.DeviceIdentifier.Contains(
+                 searchText, StringComparison.OrdinalIgnoreCase) ||
+             (sensor.DeploymentLocation?.Contains(
+                 searchText, StringComparison.OrdinalIgnoreCase) ?? false)) &&
+
+            (categoryFilter == "All" ||
+             sensor.Category.ToString() == categoryFilter) &&
+
+            (statusFilter == "All" ||
+             (statusFilter == "Active" && sensor.IsActive) ||
+             (statusFilter == "Inactive" && !sensor.IsActive) ||
+             (statusFilter == "Faults" &&
+              activeFaults.Any(fault =>
+                  fault.StartsWith(
+                      sensor.DeviceIdentifier + ":",
+                      StringComparison.OrdinalIgnoreCase)))));
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    // Reload gateway data without resetting filters.
+    private async Task LoadData()
+    {
+        if (busy || stateLoading)
+            return;
+
+        loading = true;
+        errorMessage = null;
+        actionError = null;
+        successMessage = null;
+
+        try
+        {
+            var loadedSensors =
+                await Http.GetFromJsonAsync<List<SensorRegistration>>(
+                    "api/sensors") ?? new();
+
+            var loadedCommands =
+                await Http.GetFromJsonAsync<List<CommandRecord>>(
+                    "api/commands/history") ?? new();
+
+            var faultResponse =
+                await Http.GetFromJsonAsync<ActiveFaultResponse>(
+                    "api/alerts/active");
+
+            sensors = loadedSensors;
+            commands = loadedCommands;
+            activeFaults = faultResponse?.Faults ?? new();
+
+            if (selectedDevice is null ||
+                !sensors.Any(s => string.Equals(
+                    s.DeviceIdentifier, selectedDevice,
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                selectedDevice = sensors.FirstOrDefault()?.DeviceIdentifier;
+            }
+
+            // Automatically select an unambiguous filtered result.
+            var matches = FilteredSensors.Take(2).ToList();
+
+            if (matches.Count == 1)
+                selectedDevice = matches[0].DeviceIdentifier;
+
+            await LoadSelectedStates();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Unable to load workspace: {ex.Message}";
+        }
+        finally
+        {
+            loading = false;
+        }
+    }
+
+    // Auto-select only when exactly one device matches.
+    private async Task AutoSelectSingleMatch()
+    {
+        if (busy || stateLoading || showConfirmation)
+            return;
+
+        var matches = FilteredSensors.Take(2).ToList();
+
+        if (matches.Count == 1 &&
+            !string.Equals(selectedDevice, matches[0].DeviceIdentifier,
+                StringComparison.OrdinalIgnoreCase))
+        {
+            await SelectDevice(matches[0].DeviceIdentifier);
+        }
+    }
+
+    // Explicit device selection always takes precedence.
+    private async Task SelectDevice(string deviceIdentifier)
+    {
+        if (busy || stateLoading || showConfirmation)
+            return;
+
+        if (!sensors.Any(s => string.Equals(
+            s.DeviceIdentifier, deviceIdentifier,
+            StringComparison.OrdinalIgnoreCase)))
+        {
+            actionError = "The selected device is not registered.";
+            return;
+        }
+
+        selectedDevice = deviceIdentifier;
+        actionError = null;
+        successMessage = null;
+
+        await LoadSelectedStates();
+    }
+
+    // Load both states from the API for the selected device.
+    private async Task LoadSelectedStates()
+    {
+        int version = ++selectionVersion;
+        string? deviceIdentifier = selectedDevice;
+
+        statesAvailable = false;
+        stateLoading = true;
+        pumpState = false;
+        relayState = false;
+
+        try
+        {
+            if (string.IsNullOrWhiteSpace(deviceIdentifier))
+                return;
+
+            string device = Uri.EscapeDataString(deviceIdentifier);
+
+            var pump = await Http.GetFromJsonAsync<ActuatorStateResponse>(
+                $"api/commands/state/{device}/Pump");
+
+            var relay = await Http.GetFromJsonAsync<ActuatorStateResponse>(
+                $"api/commands/state/{device}/Relay");
+
+            if (pump is null || relay is null)
+                throw new InvalidOperationException(
+                    "The API returned an incomplete device state.");
+
+            // Ignore responses belonging to an older selection.
+            if (version != selectionVersion ||
+                selectedDevice != deviceIdentifier)
+                return;
+
+            pumpState = pump.IsOn;
+            relayState = relay.IsOn;
+            statesAvailable = true;
+        }
+        catch (Exception ex)
+        {
+            if (version == selectionVersion)
+                actionError = $"Could not load device states: {ex.Message}";
+        }
+        finally
+        {
+            if (version == selectionVersion)
+                stateLoading = false;
+        }
+    }
+
+    // Prepare a command without executing it immediately.
+    private void RequestCommand(string commandType, bool newState)
+    {
+        if (busy || stateLoading || !statesAvailable ||
+            SelectedSensor is null || !SelectedSensor.IsActive)
+            return;
+
+        if (commandType != "Pump" && commandType != "Relay")
+        {
+            actionError = "Unsupported command type.";
+            return;
+        }
+
+        bool currentState =
+            commandType == "Pump" ? pumpState : relayState;
+
+        if (currentState == newState)
+            return;
+
+        pendingDevice = SelectedSensor.DeviceIdentifier;
+        pendingCommandType = commandType;
+        pendingNewState = newState;
+        pendingUndo = false;
+        showConfirmation = true;
+
+        actionError = null;
+        successMessage = null;
+    }
+
+    private void RequestUndo()
+    {
+        if (busy || stateLoading || commands.Count == 0)
+            return;
+
+        pendingUndo = true;
+        showConfirmation = true;
+        actionError = null;
+        successMessage = null;
+    }
+
+    private void CancelConfirmation()
+    {
+        if (busy)
+            return;
+
+        showConfirmation = false;
+        pendingUndo = false;
+    }
+
+    private async Task ConfirmAction()
+    {
+        if (busy || !showConfirmation)
+            return;
+
+        if (pendingUndo)
+            await UndoLast();
+        else
+            await ExecuteCommand();
+    }
+
+    // Execute the exact device and state shown in the dialog.
+    private async Task ExecuteCommand()
+    {
+        if (busy || !statesAvailable)
+            return;
+
+        var sensor = sensors.FirstOrDefault(s =>
+            string.Equals(s.DeviceIdentifier, pendingDevice,
+                StringComparison.OrdinalIgnoreCase));
+
+        if (sensor is null || !sensor.IsActive ||
+            selectedDevice != pendingDevice)
+        {
+            showConfirmation = false;
+            actionError = "Device selection changed or device is inactive.";
+            return;
+        }
+
+        busy = true;
+        actionError = null;
+
+        try
+        {
+            var request = new CommandRequest
+            {
+                DeviceIdentifier = pendingDevice,
+                CommandType = pendingCommandType,
+                NewState = pendingNewState
+            };
+
+            using var response =
+                await Http.PostAsJsonAsync("api/commands", request);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                actionError =
+                    $"Command rejected ({(int)response.StatusCode}): " +
+                    await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            showConfirmation = false;
+
+            successMessage =
+                $"{pendingCommandType} turned " +
+                $"{(pendingNewState ? "ON" : "OFF")} " +
+                $"for {pendingDevice}.";
+
+            await RefreshAfterAction();
+        }
+        catch (Exception ex)
+        {
+            showConfirmation = false;
+            actionError =
+                $"Command could not be confirmed: {ex.Message}. " +
+                "Refresh before retrying to avoid duplicate commands.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // Undo the newest command in the backend LIFO stack.
+    private async Task UndoLast()
+    {
+        if (busy || commands.Count == 0)
+            return;
+
+        busy = true;
+        actionError = null;
+
+        try
+        {
+            using var response =
+                await Http.PostAsync("api/commands/undo", null);
+
+            if (!response.IsSuccessStatusCode)
+            {
+                actionError =
+                    $"Undo rejected ({(int)response.StatusCode}): " +
+                    await response.Content.ReadAsStringAsync();
+                return;
+            }
+
+            showConfirmation = false;
+            successMessage = "Latest command successfully undone.";
+
+            await RefreshAfterAction();
+        }
+        catch (Exception ex)
+        {
+            showConfirmation = false;
+            actionError =
+                $"Undo could not be confirmed: {ex.Message}. " +
+                "Refresh the workspace before retrying.";
+        }
+        finally
+        {
+            busy = false;
+        }
+    }
+
+    // Refresh the history and selected device after a successful action.
+    private async Task RefreshAfterAction()
+    {
+        try
+        {
+            commands =
+                await Http.GetFromJsonAsync<List<CommandRecord>>(
+                    "api/commands/history") ?? new();
+
+            await LoadSelectedStates();
+
+            if (!statesAvailable)
+                successMessage = null;
+        }
+        catch (Exception ex)
+        {
+            statesAvailable = false;
+            successMessage = null;
+            actionError =
+                $"Action was accepted, but the updated state " +
+                $"could not be verified: {ex.Message}";
+        }
+    }
+
+    private sealed class CommandRequest
+    {
+        public string DeviceIdentifier { get; set; } = "";
+        public string CommandType { get; set; } = "";
+        public bool NewState { get; set; }
+    }
+
+    private sealed class CommandRecord
+    {
+        public Guid CommandId { get; set; }
+        public string DeviceIdentifier { get; set; } = "";
+        public string CommandType { get; set; } = "";
+        public bool PreviousState { get; set; }
+        public bool NewState { get; set; }
+        public DateTime ExecutedAtUtc { get; set; }
+        public bool IsUndone { get; set; }
+    }
+
+    private sealed class ActuatorStateResponse
+    {
+        public bool IsOn { get; set; }
+    }
+
+    private sealed class ActiveFaultResponse
+    {
+        public int TotalActiveFaults { get; set; }
+        public List<string> Faults { get; set; } = new();
+    }
+}

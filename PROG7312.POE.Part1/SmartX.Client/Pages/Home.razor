@@ -6,11 +6,9 @@
 <PageTitle>Smart-X Gateway</PageTitle>
 
 <div class="smartx-page">
-
     <header class="topbar">
         <div class="brand">
             <div class="brand-mark">SX</div>
-
             <div>
                 <h1>Smart-X</h1>
                 <span>IoT Mesh Ecosystem</span>
@@ -24,7 +22,6 @@
     </header>
 
     <main class="page-content">
-
         <section class="hero">
             <div class="hero-copy">
                 <span class="eyebrow">SMART-X MANAGEMENT GATEWAY</span>
@@ -56,7 +53,6 @@
                 </div>
 
                 <div class="overview-grid">
-
                     <div class="metric">
                         <span>Registered sensors</span>
 
@@ -91,10 +87,9 @@
                     </div>
 
                     <div class="metric">
-                        <span>Active module</span>
-                        <strong>01 / 03</strong>
+                        <span>Active modules</span>
+                        <strong>02 / 03</strong>
                     </div>
-
                 </div>
 
                 @if (!string.IsNullOrWhiteSpace(errorMessage))
@@ -107,7 +102,6 @@
         </section>
 
         <section class="modules-section">
-
             <div class="section-heading">
                 <div>
                     <span class="eyebrow">PLATFORM MODULES</span>
@@ -121,6 +115,7 @@
 
             <div class="module-grid">
 
+                <!-- Module 01: Sensor Data Ingestion & Telemetry -->
                 <a class="module-card active-card" href="/dashboard">
                     <div class="module-top">
                         <span class="module-number">01</span>
@@ -139,7 +134,7 @@
                     </p>
 
                     <div class="availability-note available-note">
-                        Available in Part 1
+                        Available · Telemetry Workspace
                     </div>
 
                     <div class="module-footer">
@@ -148,10 +143,11 @@
                     </div>
                 </a>
 
-                <div class="module-card disabled-card">
+                <!-- Module 02: Real-Time Command Stream & History -->
+                <a class="module-card active-card" href="/commands">
                     <div class="module-top">
                         <span class="module-number">02</span>
-                        <span class="module-state locked-state">PART 2</span>
+                        <span class="module-state active-state">ACTIVE</span>
                     </div>
 
                     <div class="module-icon">
@@ -161,24 +157,25 @@
                     <h3>Real-Time Command Stream &amp; History</h3>
 
                     <p>
-                        Device command execution, delivery tracking and
-                        historical command auditing.
+                        Monitor device activity, execute Pump and Relay commands,
+                        review command history and manage device operations.
                     </p>
 
-                    <div class="availability-note unavailable-note">
-                        Unavailable in Part 1 — scheduled for Part 2
+                    <div class="availability-note available-note">
+                        Available · Command Management
                     </div>
 
-                    <div class="module-footer muted">
-                        <span>Module unavailable</span>
-                        <span>Locked</span>
+                    <div class="module-footer">
+                        <span>Open command workspace</span>
+                        <span class="arrow">→</span>
                     </div>
-                </div>
+                </a>
 
+                <!-- Module 03: Network Topology & Mesh Routing -->
                 <div class="module-card disabled-card">
                     <div class="module-top">
                         <span class="module-number">03</span>
-                        <span class="module-state locked-state">FINAL POE</span>
+                        <span class="module-state locked-state">COMING SOON</span>
                     </div>
 
                     <div class="module-icon">
@@ -193,25 +190,23 @@
                     </p>
 
                     <div class="availability-note unavailable-note">
-                        Unavailable in Part 1 — scheduled for Final POE
+                        Planned for Final POE
                     </div>
 
                     <div class="module-footer muted">
-                        <span>Module unavailable</span>
-                        <span>Locked</span>
+                        <span>Future module</span>
+                        <span>Not yet available</span>
                     </div>
                 </div>
 
             </div>
         </section>
-
     </main>
 
     <footer class="page-footer">
         <span>Smart-X IoT Mesh Ecosystem</span>
-        <span>Data Ingestion &amp; Validation Gateway</span>
+        <span>Data Ingestion &amp; Command Management Gateway</span>
     </footer>
-
 </div>
 
 @code {
