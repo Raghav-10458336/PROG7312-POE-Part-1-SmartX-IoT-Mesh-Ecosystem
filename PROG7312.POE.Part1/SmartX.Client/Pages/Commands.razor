@@ -378,19 +378,44 @@
                 @if (!VisibleTelemetry.Any())
                 {
                     <div class="empty-state">
-                        No readings found for the current view. Try showing all devices,
-                        or send a new telemetry packet to the API.
+                        No readings found for this view. Try showing all devices or
+                        select a device with recent telemetry.
                     </div>
                 }
                 else
                 {
+                    <div class="telemetry-visual-heading">
+                        <div>
+                            <span class="panel-eyebrow">LATEST SENSOR VALUES</span>
+                            <h3>Current readings</h3>
+                            <p>Most recent metrics received from the Smart-X gateway.</p>
+                        </div>
+                    </div>
+                    <div class="telemetry-metric-grid">
+                        @foreach (var latest in LatestMetricReadings)
+                        {
+                            <div class="telemetry-metric-card" @key="(latest.DeviceIdentifier, latest.MetricName)">
+                                <small>@latest.MetricName</small>
+                                <strong>@latest.DisplayValue</strong>
+                                <span>@latest.DeviceIdentifier</span>
+                                <small>Recorded @latest.TimestampUtc.ToLocalTime().ToString("dd MMM HH:mm:ss")</small>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="telemetry-visual-heading">
+                        <div>
+                            <span class="panel-eyebrow">RECENT PACKETS</span>
+                            <h3>Telemetry activity</h3>
+                        </div>
+                    </div>
                     <div class="command-table-wrap">
                         <table class="command-table">
                             <thead>
                                 <tr><th>Device</th><th>Metric</th><th>Value</th><th>Type</th><th>Recorded (local)</th></tr>
                             </thead>
                             <tbody>
-                                @foreach (var reading in VisibleTelemetry.Take(30))
+                                @foreach (var reading in VisibleTelemetry.Take(15))
                                 {
                                     <tr>
                                         <td>@reading.DeviceIdentifier</td>
@@ -694,6 +719,69 @@
                 opacity: .55;
                 cursor: not-allowed;
             }
+
+    .telemetry-visual-heading {
+        margin: 22px 0 14px;
+    }
+
+        .telemetry-visual-heading h3 {
+            margin: 7px 0;
+            font-size: 18px;
+            color: #17212b;
+        }
+
+        .telemetry-visual-heading p {
+            margin: 0;
+            color: #758394;
+            font-size: 13px;
+        }
+
+    .telemetry-metric-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 12px;
+    }
+
+    .telemetry-metric-card {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        min-width: 0;
+        padding: 16px;
+        border: 1px solid #dce9eb;
+        border-radius: 9px;
+        background: #f5f9fa;
+    }
+
+        .telemetry-metric-card small {
+            font-size: 12px;
+            color: #758394;
+            overflow-wrap: anywhere;
+        }
+
+        .telemetry-metric-card strong {
+            font-size: 20px;
+            color: #17212b;
+            overflow-wrap: anywhere;
+        }
+
+        .telemetry-metric-card span {
+            font-size: 12px;
+            color: #087f86;
+            overflow-wrap: anywhere;
+        }
+
+    @@media (max-width: 1050px) {
+        .telemetry-metric-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @@media (max-width: 600px) {
+        .telemetry-metric-grid {
+            grid-template-columns: 1fr;
+        }
+    }
 </style>
 
 @code {
@@ -704,6 +792,11 @@
     private string? telemetryError;
     private DateTime? telemetryCheckedAt;
     private List<TelemetryReading> telemetryReadings = new();
+    private List<TelemetryReading> LatestMetricReadings =>
+        VisibleTelemetry.GroupBy(r => (r.DeviceIdentifier, r.MetricName))
+            .Select(g => g.OrderByDescending(r => r.TimestampUtc).First())
+            .OrderByDescending(r => r.TimestampUtc)
+            .Take(8).ToList();
 
     private IEnumerable<TelemetryReading> VisibleTelemetry =>
         telemetryReadings.Where(r => !onlySelectedTelemetry ||
@@ -1113,6 +1206,11 @@
             }
         }
         catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (Exception ex)
+        {
+            telemetryError = $"Automatic refresh stopped: {ex.Message}";
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task RefreshTelemetry()
@@ -1126,7 +1224,7 @@
             var all = new List<TelemetryReading>();
             foreach (string type in new[] { "float", "integer", "boolean" })
             {
-                using var response = await Http.GetAsync($"api/telemetry/{type}?take=100",
+                using var response = await Http.GetAsync($"api/telemetry/{type}?take=20",
                     telemetryCancellation.Token);
                 response.EnsureSuccessStatusCode();
                 using var json = await JsonDocument.ParseAsync(
@@ -1154,7 +1252,7 @@
             }
 
             telemetryReadings = all.OrderByDescending(r => r.TimestampUtc)
-                .Take(100).ToList();
+                .Take(60).ToList();
             telemetryCheckedAt = DateTime.UtcNow;
             telemetryError = null;
         }
