@@ -482,16 +482,28 @@
                     and commands still in the undo stack. Nothing is executed automatically.
                 </p>
                 <div class="recommendation-grid">
-    @foreach (var suggestion in ActionSuggestions)
-    {
-        <div class="recommendation-card">
-            <span class="recommendation-category">@suggestion.Category</span>
-            <strong>@suggestion.Title</strong>
-            <p>@suggestion.Description</p>
-        </div>
-    }
-</div>
-                
+                    @foreach (var suggestion in ActionSuggestions)
+                    {
+                        @if (suggestion.Category == "Active fault")
+                        {
+                            <a class="recommendation-card recommendation-link" href="/alerts" title="Open Attention Centre">
+                                <span class="recommendation-category">@suggestion.Category</span>
+                                <strong>@suggestion.Title</strong>
+                                <p>@suggestion.Description</p>
+                                <span class="recommendation-action">Open Attention Centre →</span>
+                            </a>
+                        }
+                        else
+                        {
+                            <div class="recommendation-card">
+                                <span class="recommendation-category">@suggestion.Category</span>
+                                <strong>@suggestion.Title</strong>
+                                <p>@suggestion.Description</p>
+                            </div>
+                        }
+                    }
+                </div>
+
             </section>
 
             <section class="panel command-history-panel">
@@ -859,6 +871,31 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
+    }
+
+    .recommendation-link {
+        text-decoration: none;
+        color: inherit;
+        cursor: pointer;
+        transition: border-color .15s ease, background-color .15s ease;
+    }
+
+        .recommendation-link:hover,
+        .recommendation-link:focus-visible {
+            border-color: #087b87;
+            background: #edf7f8;
+        }
+
+        .recommendation-link:focus-visible {
+            outline: 2px solid #087b87;
+            outline-offset: 2px;
+        }
+
+    .recommendation-action {
+        margin-top: auto;
+        color: #087b87;
+        font-size: 12px;
+        font-weight: 700;
     }
 
     .recommendation-category {

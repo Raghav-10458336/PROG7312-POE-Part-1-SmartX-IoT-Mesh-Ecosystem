@@ -646,8 +646,23 @@
             }
         }
 
-        if (!string.IsNullOrWhiteSpace(unit))
+        // Display actuator Boolean values as readable states.
+        if (dataType == "Boolean")
+        {
+            bool isActive = valueText == "True";
+
+            valueText = metric switch
+            {
+                "Pump State" => isActive ? "Running" : "Stopped",
+                "Relay State" => isActive ? "Enabled" : "Disabled",
+                "Valve State" => isActive ? "Open" : "Closed",
+                _ => valueText
+            };
+        }
+        else if (!string.IsNullOrWhiteSpace(unit))
+        {
             valueText += $" {unit}";
+        }
 
         return new HistoryReading
         {
