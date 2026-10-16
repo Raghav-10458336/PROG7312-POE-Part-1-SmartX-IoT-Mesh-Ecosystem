@@ -1,0 +1,88 @@
+﻿@using Microsoft.AspNetCore.Components
+
+<aside class="sidebar">
+    <a class="sidebar-brand" href="/">
+        <div class="brand-mark">SX</div>
+        <div>
+            <strong>Smart-X</strong>
+            <span>IoT Mesh</span>
+        </div>
+    </a>
+
+    <nav class="sidebar-nav">
+        <span class="nav-label">TELEMETRY WORKSPACE</span>
+
+        <a class="nav-item @(CurrentPage == "dashboard" ? "active" : "")"
+           href="/dashboard">
+            <span class="nav-icon">⌂</span>
+            Dashboard
+        </a>
+
+        <a class="nav-item @(CurrentPage == "sensors" ? "active" : "")"
+           href="/sensors">
+            <span class="nav-icon">◉</span>
+            Sensors
+        </a>
+
+        <a class="nav-item @(CurrentPage == "telemetry" ? "active" : "")"
+           href="/telemetry">
+            <span class="nav-icon">⌁</span>
+            Telemetry
+        </a>
+
+        <a class="nav-item @(CurrentPage == "alerts" ? "active" : "")"
+           href="/alerts">
+            <span class="nav-icon">!</span>
+            Attention Centre
+
+            @if (AlertCount > 0)
+            {
+                <span class="nav-count">@AlertCount</span>
+            }
+        </a>
+
+        <span class="nav-label secondary-label">MANAGEMENT</span>
+
+        <a class="nav-item @(CurrentPage == "attachments" ? "active" : "")"
+           href="/attachments">
+            <span class="nav-icon">□</span>
+            Attachments
+        </a>
+
+        <a class="nav-item @(CurrentPage == "deployment" ? "active" : "")"
+           href="/deployment">
+            <span class="nav-icon">⌘</span>
+            Deployment Validation
+        </a>
+
+        <span class="nav-label secondary-label">COMMAND MANAGEMENT</span>
+
+        <a class="nav-item @(CurrentPage == "commands" ? "active" : "")"
+           href="/commands">
+            <span class="nav-icon">⇄</span>
+            Command Stream &amp; History
+        </a>
+
+        <a class="nav-item @(CurrentPage == "history" ? "active" : "")"
+           href="/history">
+            <span class="nav-icon">◷</span>
+            Historical Telemetry
+        </a>
+    </nav>
+
+    <div class="sidebar-footer">
+        <span class="sidebar-status">
+            <span class="status-dot"></span>
+            Smart-X Gateway
+        </span>
+        <span>Smart-X Part 2</span>
+    </div>
+</aside>
+
+@code {
+    [Parameter]
+    public string CurrentPage { get; set; } = string.Empty;
+
+    [Parameter]
+    public int AlertCount { get; set; }
+}
