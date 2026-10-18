@@ -1066,7 +1066,7 @@ Postman can also be used for direct API testing.
 Clone the repository using Git:
 
 ```bash
-git clone <repository-url>
+https://github.com/Raghav-10458336/PROG7312-POE-Part-1-SmartX-IoT-Mesh-Ecosystem
 ```
 
 Alternatively, clone the repository through Visual Studio or GitHub Desktop.
