@@ -3,6 +3,7 @@
 @using System.Text.Json
 @using System.Globalization
 @inject HttpClient Http
+@using Microsoft.AspNetCore.Components
 
 <PageTitle>Smart-X | Historical Telemetry</PageTitle>
 
@@ -177,6 +178,14 @@
                 </div>
             </div>
 
+            @if (!string.IsNullOrWhiteSpace(focusedDevice))
+            {
+                <div class="history-focus" role="status">
+                    Viewing suggested historical pattern for <strong>@focusedDevice</strong>.
+                    <button type="button" class="history-secondary" @onclick="ResetFilters">Clear insight filter</button>
+                </div>
+            }
+
             <div class="history-toolbar">
                 <button class="history-primary"
                         disabled="@loading"
@@ -276,6 +285,20 @@
 </div>
 
 <style>
+    .history-focus {
+        background: #eef8f9;
+        border: 1px solid #c6e5e8;
+        border-radius: 8px;
+        padding: 12px 15px;
+        margin-bottom: 16px;
+        color: #246171;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
     .history-panel {
         padding: 28px;
     }
@@ -464,6 +487,16 @@
 </style>
 
 @code {
+    [SupplyParameterFromQuery(Name = "device")]
+    public string? InsightDevice { get; set; }
+
+    [SupplyParameterFromQuery(Name = "metric")]
+    public string? InsightMetric { get; set; }
+
+    [SupplyParameterFromQuery(Name = "days")]
+    public int? InsightDays { get; set; }
+
+    private string? focusedDevice;
     private bool loading;
     private string? errorMessage;
 
@@ -478,6 +511,7 @@
     private List<string> AvailableMetrics =>
         readings
             .Select(reading => reading.MetricName)
+            .Concat(!string.IsNullOrWhiteSpace(InsightMetric) ? new[] { InsightMetric } : Array.Empty<string>())
             .Where(metric => !string.IsNullOrWhiteSpace(metric))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .OrderBy(metric => metric)
@@ -500,6 +534,19 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(InsightDevice))
+        {
+            focusedDevice = InsightDevice.Trim();
+            deviceFilter = focusedDevice;
+            if (!string.IsNullOrWhiteSpace(InsightMetric))
+                metricFilter = InsightMetric.Trim();
+            if (InsightDays is > 0 and <= 30)
+            {
+                startUtc = DateTime.UtcNow.AddDays(-InsightDays.Value);
+                endUtc = DateTime.UtcNow.AddMinutes(5);
+            }
+        }
+
         await ApplyFilters();
     }
 
@@ -509,6 +556,13 @@
             return;
 
         errorMessage = null;
+
+        // datetime-local inputs have no timezone; treat their displayed values as UTC.
+        if (startUtc == DateTime.MinValue || endUtc == DateTime.MinValue)
+        {
+            errorMessage = "Enter both UTC dates before applying filters.";
+            return;
+        }
 
         if (startUtc > endUtc)
         {
@@ -523,11 +577,11 @@
         {
             // The backend provides date-range and device history endpoints.
             string start = Uri.EscapeDataString(
-                startUtc.ToString("yyyy-MM-ddTHH:mm:ssZ",
+                DateTime.SpecifyKind(startUtc, DateTimeKind.Utc).ToString("yyyy-MM-ddTHH:mm:ssZ",
                     CultureInfo.InvariantCulture));
 
             string end = Uri.EscapeDataString(
-                endUtc.ToString("yyyy-MM-ddTHH:mm:ssZ",
+                DateTime.SpecifyKind(endUtc, DateTimeKind.Utc).ToString("yyyy-MM-ddTHH:mm:ssZ",
                     CultureInfo.InvariantCulture));
 
             string endpoint =
@@ -559,7 +613,10 @@
                 }
             }
 
-            readings = loaded;
+            // Guard against inconsistent server ranges without changing the API contract.
+            readings = loaded.Where(reading =>
+                reading.TimestampUtc >= DateTime.SpecifyKind(startUtc, DateTimeKind.Utc) &&
+                reading.TimestampUtc <= DateTime.SpecifyKind(endUtc, DateTimeKind.Utc)).ToList();
 
             // Keep a previously selected metric only if it still exists.
             if (metricFilter != "All" &&
@@ -572,7 +629,9 @@
         }
         catch (Exception ex)
         {
-            errorMessage = ex.Message;
+            errorMessage = ex is HttpRequestException
+                ? "Unable to retrieve historical readings. Check the API connection and try again."
+                : "Historical readings could not be loaded. Please try again.";
             readings.Clear();
         }
         finally
@@ -583,6 +642,7 @@
 
     private async Task ResetFilters()
     {
+        focusedDevice = null;
         startUtc = DateTime.UtcNow.AddDays(-2);
         endUtc = DateTime.UtcNow.AddDays(1);
         deviceFilter = "";

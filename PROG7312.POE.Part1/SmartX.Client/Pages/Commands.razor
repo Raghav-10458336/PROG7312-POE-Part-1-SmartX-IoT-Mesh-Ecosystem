@@ -478,19 +478,21 @@
                     <span class="command-counter">Rule-based guidance</span>
                 </div>
                 <p class="command-hint">
-                    Suggestions are based on recent gateway readings, unresolved faults
+                    Suggestions are based on recent and historical gateway readings, unresolved faults
                     and commands still in the undo stack. Nothing is executed automatically.
                 </p>
                 <div class="recommendation-grid">
                     @foreach (var suggestion in ActionSuggestions)
                     {
-                        @if (suggestion.Category == "Active fault")
+                        @if (suggestion.Category == "Active fault" || suggestion.Category == "Historical pattern")
                         {
-                            <a class="recommendation-card recommendation-link" href="/alerts" title="Open Attention Centre">
+                            <a class="recommendation-card recommendation-link"
+                               href="@SuggestionLink(suggestion)"
+                               title="@(suggestion.Category == "Active fault" ? "Open Attention Centre" : "Open Historical Telemetry")">
                                 <span class="recommendation-category">@suggestion.Category</span>
                                 <strong>@suggestion.Title</strong>
                                 <p>@suggestion.Description</p>
-                                <span class="recommendation-action">Open Attention Centre →</span>
+                                <span class="recommendation-action">@(suggestion.Category == "Active fault" ? "Open Attention Centre →" : "Open Historical Telemetry →")</span>
                             </a>
                         }
                         else
@@ -922,6 +924,29 @@
 @code {
     private sealed record ActionSuggestion(string Category, string Title, string Description);
 
+    // Pass the selected insight to the destination without loading extra data.
+    private static string SuggestionLink(ActionSuggestion suggestion)
+    {
+        if (suggestion.Category == "Historical pattern")
+        {
+            string device = suggestion.Title.Split(':', 2).Last().Trim();
+            string metric = suggestion.Title.Contains("moisture", StringComparison.OrdinalIgnoreCase)
+                ? "Soil Moisture" : "Temperature";
+            return $"/history?device={Uri.EscapeDataString(device)}&metric={Uri.EscapeDataString(metric)}&days=7";
+        }
+
+        if (suggestion.Category == "Active fault")
+        {
+            string fault = suggestion.Description.Split("Unresolved fault:", 2).Last()
+                .Split('.', 2).First().Trim();
+            string device = fault.Split(':', 2).First().Trim();
+            string metric = fault.Contains(':') ? fault.Split(':', 2)[1].Trim() : "";
+            return $"/alerts?device={Uri.EscapeDataString(device)}&metric={Uri.EscapeDataString(metric)}";
+        }
+
+        return "/commands";
+    }
+
     // Read-only rules: recommendations never send device commands.
     private List<ActionSuggestion> ActionSuggestions
     {
@@ -945,6 +970,30 @@
                 }
             }
 
+            // Show up to two evidence-based historical patterns before active faults.
+            var patterns = new List<ActionSuggestion>();
+            foreach (var group in historicalMoisture
+                .GroupBy(r => r.DeviceIdentifier, StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.Count(r => r.Value < 20) >= 3)
+                .OrderByDescending(g => g.Count(r => r.Value < 20)))
+            {
+                int lowCount = group.Count(r => r.Value < 20);
+                patterns.Add(new("Historical pattern", $"Recurring low moisture: {group.Key}",
+                    $"{lowCount} recent soil-moisture readings were below 20%. Review the irrigation conditions before applying a manual override."));
+            }
+
+            foreach (var group in historicalTemperature
+                .GroupBy(r => r.DeviceIdentifier, StringComparer.OrdinalIgnoreCase)
+                .Where(g => g.Count(r => r.Value > 35) >= 3)
+                .OrderByDescending(g => g.Count(r => r.Value > 35)))
+            {
+                int highCount = group.Count(r => r.Value > 35);
+                patterns.Add(new("Historical pattern", $"Recurring high temperature: {group.Key}",
+                    $"{highCount} recent temperature readings exceeded 35°C. Review the device's operating conditions and historical telemetry."));
+            }
+
+            result.InsertRange(0, patterns.Take(2));
+
             foreach (var fault in activeFaults.Take(3))
             {
                 result.Add(new("Active fault", "Investigate device alert",
@@ -965,6 +1014,53 @@
             }
 
             return result.Take(5).ToList();
+        }
+    }
+
+    private sealed record MoistureSample(string DeviceIdentifier, double Value);
+    private List<MoistureSample> historicalMoisture = new();
+    private List<MoistureSample> historicalTemperature = new();
+
+    // Query history only on workspace load/refresh, never on the 5-second poll.
+    private async Task LoadHistoricalPatterns()
+    {
+        try
+        {
+            string start = Uri.EscapeDataString(DateTime.UtcNow.AddDays(-7).ToString("yyyy-MM-ddTHH:mm:ssZ"));
+            string end = Uri.EscapeDataString(DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ"));
+            using var response = await Http.GetAsync($"api/history/range?startUtc={start}&endUtc={end}");
+            response.EnsureSuccessStatusCode();
+            using var document = await response.Content.ReadFromJsonAsync<JsonDocument>();
+            var moistureSamples = new List<MoistureSample>();
+            var temperatureSamples = new List<MoistureSample>();
+            if (document?.RootElement.ValueKind == JsonValueKind.Array)
+            {
+                // Scan the full seven-day result; retain only readings relevant to the rules.
+                foreach (var packet in document.RootElement.EnumerateArray())
+                {
+                    string device = JsonText(packet, "deviceIdentifier");
+                    string metric = JsonText(packet, "metricName");
+                    string value = JsonText(packet, "value");
+                    if (string.IsNullOrWhiteSpace(device) ||
+                        !double.TryParse(value, System.Globalization.NumberStyles.Float,
+                            System.Globalization.CultureInfo.InvariantCulture, out double numericValue))
+                        continue;
+
+                    if (metric.Equals("Soil Moisture", StringComparison.OrdinalIgnoreCase) && numericValue < 20)
+                        moistureSamples.Add(new(device, numericValue));
+                    else if (metric.Equals("Temperature", StringComparison.OrdinalIgnoreCase) && numericValue > 35)
+                        temperatureSamples.Add(new(device, numericValue));
+                }
+            }
+
+            historicalMoisture = moistureSamples;
+            historicalTemperature = temperatureSamples;
+        }
+        catch (Exception)
+        {
+            // Optional insights must never block the command workspace.
+            historicalMoisture.Clear();
+            historicalTemperature.Clear();
         }
     }
 
@@ -1078,6 +1174,8 @@
             sensors = loadedSensors;
             commands = loadedCommands;
             activeFaults = faultResponse?.Faults ?? new();
+
+            await LoadHistoricalPatterns();
 
             if (selectedDevice is null ||
                 !sensors.Any(s => string.Equals(

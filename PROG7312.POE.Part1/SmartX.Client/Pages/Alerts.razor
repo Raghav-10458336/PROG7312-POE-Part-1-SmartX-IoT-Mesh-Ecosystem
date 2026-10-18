@@ -2,6 +2,7 @@
 @using System.Net.Http.Json
 @using SmartX.Shared.Models
 @inject HttpClient Http
+@using Microsoft.AspNetCore.Components
 
 <PageTitle>Smart-X | Attention Centre</PageTitle>
 
@@ -170,6 +171,14 @@
 
                 </div>
 
+                @if (!string.IsNullOrWhiteSpace(focusedDevice))
+                {
+                    <div class="insight-focus" role="status">
+                        Showing alerts for <strong>@focusedDevice</strong> first.
+                        <button type="button" class="clear-button" @onclick="ClearFilters">Clear insight filter</button>
+                    </div>
+                }
+
                 <div class="filter-bar">
 
                     <div class="search-field">
@@ -237,7 +246,7 @@
                         @foreach (TelemetryAlert alert
                             in FilteredAlerts.Take(100))
                         {
-                            <article class="alert-card @(alert.IsAcknowledged ? "acknowledged-alert" : "")">
+                            <article class="alert-card @(alert.IsAcknowledged ? "acknowledged-alert" : "") @(IsFocusedAlert(alert) ? "insight-highlight" : "")">
 
                                 <div class="severity-strip @GetSeverityClass(alert.Severity)">
                                 </div>
@@ -360,7 +369,43 @@
 
 </div>
 
+<style>
+    .insight-focus {
+        margin: 16px 0;
+        padding: 12px 16px;
+        border: 1px solid #c6e5e8;
+        border-radius: 8px;
+        background: #eef8f9;
+        color: #246171;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+
+    .insight-highlight {
+        outline: 2px solid #008392;
+        outline-offset: -2px;
+    }
+</style>
+
 @code {
+    [SupplyParameterFromQuery(Name = "device")]
+    public string? InsightDevice { get; set; }
+
+    [SupplyParameterFromQuery(Name = "metric")]
+    public string? InsightMetric { get; set; }
+
+    private string? focusedDevice;
+    private string? focusedMetric;
+
+    private bool IsFocusedAlert(TelemetryAlert alert) =>
+        !string.IsNullOrWhiteSpace(focusedDevice) &&
+        alert.DeviceIdentifier.Equals(focusedDevice, StringComparison.OrdinalIgnoreCase) &&
+        (string.IsNullOrWhiteSpace(focusedMetric) ||
+         alert.MetricName.Equals(focusedMetric, StringComparison.OrdinalIgnoreCase));
+
     private bool loading = true;
 
     private string? errorMessage;
@@ -379,6 +424,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        if (!string.IsNullOrWhiteSpace(InsightDevice))
+        {
+            focusedDevice = InsightDevice.Trim();
+            focusedMetric = InsightMetric?.Trim();
+            selectedStatus = "All";
+        }
         await LoadAlerts();
     }
 
@@ -459,7 +510,10 @@
                             StringComparison.OrdinalIgnoreCase));
             }
 
-            return query;
+            // Keep the linked fault first, then preserve the existing alert order.
+            return string.IsNullOrWhiteSpace(focusedDevice)
+                ? query
+                : query.OrderByDescending(IsFocusedAlert);
         }
     }
 
@@ -523,6 +577,8 @@
 
     private void ClearFilters()
     {
+        focusedDevice = null;
+        focusedMetric = null;
         searchText = string.Empty;
         selectedStatus = "Unacknowledged";
         selectedSeverity = "All";
