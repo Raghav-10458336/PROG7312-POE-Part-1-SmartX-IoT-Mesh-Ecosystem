@@ -8,7 +8,7 @@ Real-Time Processing and Device Management, extending the Part 1 Sensor Data Ing
 **Module:** PROG7312  
 **Assessment:** POE Part 2  
 **Project:** Smart-X IoT Mesh Ecosystem  
-**Youtube Link:**
+**Youtube Link:** https://www.youtube.com/watch?v=vk7PITxr740 
 
 
 ---
