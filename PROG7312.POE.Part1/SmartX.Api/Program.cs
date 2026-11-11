@@ -28,6 +28,11 @@ namespace SmartX.Api
             builder.Services.AddSingleton<DeviceCommandService>();
 
 
+            builder.Services.AddSingleton<MeshNetworkService>();
+            builder.Services.AddSingleton<MeshTopologyInitializer>();
+
+
+
             builder.Services.AddCors(options =>
             {
                 options.AddPolicy("SmartXClientPolicy", policy =>
@@ -43,13 +48,22 @@ namespace SmartX.Api
 
 
 
+
             using (IServiceScope scope = app.Services.CreateScope())
             {
+                // Seed the existing Smart-X sensors and telemetry.
                 MockTelemetrySeeder seeder =
                     scope.ServiceProvider.GetRequiredService<MockTelemetrySeeder>();
 
                 seeder.Seed();
+
+                // Build the initial mesh after sensor registration is complete.
+                MeshTopologyInitializer meshInitializer =
+                    scope.ServiceProvider.GetRequiredService<MeshTopologyInitializer>();
+
+                meshInitializer.Initialize();
             }
+
 
             // Configure the HTTP request pipeline.
             if (app.Environment.IsDevelopment())
