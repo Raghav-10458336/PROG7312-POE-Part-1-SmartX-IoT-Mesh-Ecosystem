@@ -70,6 +70,40 @@ namespace SmartX.Api.Controllers
             return Ok(_meshNetwork.GetMstRoute(sensorId));
         }
 
+        // Retrieve the lowest-weight route using Dijkstra's algorithm.
+        [HttpGet("routes/{sensorId}/shortest")]
+        public ActionResult<MeshRouteResult> GetShortestRoute(
+            string sensorId)
+        {
+            if (string.IsNullOrWhiteSpace(sensorId))
+            {
+                return BadRequest(new
+                {
+                    message = "A valid sensor identifier is required."
+                });
+            }
+
+            var snapshot = _meshNetwork.GetSnapshot();
+
+            var sensorExists = snapshot.Nodes.Any(node =>
+                node.Type == MeshNodeType.Sensor &&
+                string.Equals(
+                    node.Id,
+                    sensorId,
+                    StringComparison.OrdinalIgnoreCase));
+
+            if (!sensorExists)
+            {
+                return NotFound(new
+                {
+                    message = $"Sensor '{sensorId}' was not found."
+                });
+            }
+
+            // Existing but disconnected sensors return IsReachable = false.
+            return Ok(_meshNetwork.GetShortestRoute(sensorId));
+        }
+
         // Simulate a sensor or gateway going online or offline.
         [HttpPut("nodes/{nodeId}/status")]
         public IActionResult UpdateNodeStatus(

@@ -304,6 +304,108 @@ namespace SmartX.Api.Services
             return result;
         }
 
+
+        // Find the minimum-weight route from a sensor to the gateway.
+        // Dijkstra considers all enabled links between online nodes.
+        public MeshRouteResult GetShortestRoute(string sensorId)
+        {
+            var snapshot = GetSnapshot();
+            var adjacency = BuildAdjacency(snapshot);
+
+            var result = new MeshRouteResult
+            {
+                SourceId = sensorId,
+                GatewayId = snapshot.GatewayId
+            };
+
+            if (string.IsNullOrWhiteSpace(sensorId) ||
+                string.IsNullOrWhiteSpace(snapshot.GatewayId) ||
+                !adjacency.ContainsKey(sensorId) ||
+                !adjacency.ContainsKey(snapshot.GatewayId))
+            {
+                return result;
+            }
+
+            var distances = new Dictionary<string, double>(
+                StringComparer.OrdinalIgnoreCase);
+
+            var parents = new Dictionary<string, string>(
+                StringComparer.OrdinalIgnoreCase);
+
+            var visited = new HashSet<string>(
+                StringComparer.OrdinalIgnoreCase);
+
+            var queue = new PriorityQueue<string, double>();
+
+            foreach (var nodeId in adjacency.Keys)
+                distances[nodeId] = double.PositiveInfinity;
+
+            distances[sensorId] = 0;
+            queue.Enqueue(sensorId, 0);
+
+            while (queue.TryDequeue(
+                out string? current,
+                out double currentDistance))
+            {
+                if (!visited.Add(current))
+                    continue;
+
+                if (string.Equals(
+                    current,
+                    snapshot.GatewayId,
+                    StringComparison.OrdinalIgnoreCase))
+                {
+                    break;
+                }
+
+                foreach (var (neighbor, weight) in adjacency[current])
+                {
+                    if (visited.Contains(neighbor))
+                        continue;
+
+                    double newDistance = currentDistance + weight;
+
+                    if (newDistance >= distances[neighbor])
+                        continue;
+
+                    distances[neighbor] = newDistance;
+                    parents[neighbor] = current;
+
+                    queue.Enqueue(neighbor, newDistance);
+                }
+            }
+
+            if (!visited.Contains(snapshot.GatewayId))
+                return result;
+
+            var path = new List<string>();
+            string cursor = snapshot.GatewayId;
+
+            path.Add(cursor);
+
+            while (!string.Equals(
+                cursor,
+                sensorId,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                if (!parents.TryGetValue(cursor, out string? previous))
+                    return result;
+
+                cursor = previous;
+                path.Add(cursor);
+            }
+
+            path.Reverse();
+
+            result.Path = path;
+            result.HopCount = Math.Max(0, path.Count - 1);
+            result.TotalWeight = distances[snapshot.GatewayId];
+            result.IsReachable = true;
+
+            return result;
+        }
+
+
         // Build adjacency lists from enabled links between online nodes.
         private static Dictionary<string, List<(string Neighbor, double Weight)>> BuildAdjacency(
             MeshNetworkSnapshot snapshot)

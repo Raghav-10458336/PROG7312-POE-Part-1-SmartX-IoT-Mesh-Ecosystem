@@ -158,8 +158,7 @@ namespace SmartX.Tests
                 result.ConnectedNodeIds.Count - 1,
                 result.SelectedLinks.Count);
 
-            // Verify that the selected edges connect every vertex
-            // without joining two vertices already connected.
+            // Verify that the selected edges form one connected tree.
             var parent = result.ConnectedNodeIds.ToDictionary(
                 id => id,
                 id => id,
@@ -335,6 +334,105 @@ namespace SmartX.Tests
 
             Assert.IsTrue(actual.Nodes.Single(n => n.Id == "A").IsOnline);
             Assert.IsTrue(actual.Links.All(l => l.IsEnabled));
+        }
+
+        // Dijkstra shortest-path tests.
+
+        [TestMethod]
+        public void Dijkstra_FindsMinimumWeightRoute()
+        {
+            var network = CreateNetwork();
+
+            var result = network.GetShortestRoute("D");
+
+            CollectionAssert.AreEqual(
+                new List<string> { "D", "C", "B", "A", Gateway },
+                result.Path);
+
+            Assert.IsTrue(result.IsReachable);
+            Assert.AreEqual(4, result.HopCount);
+            Assert.AreEqual(7.0, result.TotalWeight, 0.000001);
+        }
+
+        [TestMethod]
+        public void Dijkstra_PrefersLowerWeightOverFewerHops()
+        {
+            var network = CreateNetwork();
+
+            // B-Gateway costs 5.
+            // B-A-Gateway costs 3.
+            var result = network.GetShortestRoute("B");
+
+            CollectionAssert.AreEqual(
+                new List<string> { "B", "A", Gateway },
+                result.Path);
+
+            Assert.IsTrue(result.IsReachable);
+            Assert.AreEqual(2, result.HopCount);
+            Assert.AreEqual(3.0, result.TotalWeight, 0.000001);
+        }
+
+        [TestMethod]
+        public void Dijkstra_DisabledLinkTriggersAlternativeRoute()
+        {
+            var network = CreateNetwork();
+
+            Assert.IsTrue(
+                network.SetLinkEnabled("A", "B", false));
+
+            var result = network.GetShortestRoute("B");
+
+            // The direct gateway link now costs less than B-C-A-Gateway.
+            CollectionAssert.AreEqual(
+                new List<string> { "B", Gateway },
+                result.Path);
+
+            Assert.IsTrue(result.IsReachable);
+            Assert.AreEqual(1, result.HopCount);
+            Assert.AreEqual(5.0, result.TotalWeight, 0.000001);
+        }
+
+        [TestMethod]
+        public void Dijkstra_OfflineSensorCannotBeUsed()
+        {
+            var network = CreateNetwork();
+
+            Assert.IsTrue(network.SetNodeOnline("C", false));
+
+            var result = network.GetShortestRoute("D");
+
+            Assert.IsFalse(result.IsReachable);
+            Assert.AreEqual(0, result.Path.Count);
+        }
+
+        [TestMethod]
+        public void Dijkstra_UnknownSensorIsUnreachable()
+        {
+            var network = CreateNetwork();
+
+            var result = network.GetShortestRoute("UNKNOWN");
+
+            Assert.IsFalse(result.IsReachable);
+            Assert.AreEqual(0, result.Path.Count);
+        }
+
+        [TestMethod]
+        public void Dijkstra_RestoredLinkRestoresOptimalRoute()
+        {
+            var network = CreateNetwork();
+
+            Assert.IsTrue(network.SetLinkEnabled("A", "B", false));
+            Assert.IsTrue(network.SetLinkEnabled("A", "B", true));
+
+            var result = network.GetShortestRoute("B");
+
+            CollectionAssert.AreEqual(
+                new List<string> { "B", "A", Gateway },
+                result.Path);
+
+            Assert.IsTrue(result.IsReachable);
+            Assert.AreEqual(2, result.HopCount);
+            Assert.AreEqual(3.0, result.TotalWeight, 0.000001);
         }
     }
 }
