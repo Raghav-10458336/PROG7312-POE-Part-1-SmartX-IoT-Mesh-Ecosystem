@@ -1,104 +1,130 @@
-﻿using SmartX.Shared.Telemetry;
+﻿
+using SmartX.Api.DataStructures;
+using SmartX.Shared.Telemetry;
 
 namespace SmartX.Api.Services
 {
     public class HistoricalTelemetryService
     {
-        private readonly SortedDictionary<DateTime, List<object>> _history = new();
+        // Maintain timestamp-ordered telemetry using a self-balancing AVL tree.
+        private readonly AvlTree<DateTime, object> _history = new();
         private readonly object _historyLock = new();
 
-        public void AddFloat(TelemetryPacket<float> packet) => AddPacket(packet.TimestampUtc, packet);
-        public void AddInteger(TelemetryPacket<int> packet) => AddPacket(packet.TimestampUtc, packet);
-        public void AddBoolean(TelemetryPacket<bool> packet) => AddPacket(packet.TimestampUtc, packet);
+        public void AddFloat(TelemetryPacket<float> packet) =>
+            AddPacket(packet.TimestampUtc, packet);
+
+        public void AddInteger(TelemetryPacket<int> packet) =>
+            AddPacket(packet.TimestampUtc, packet);
+
+        public void AddBoolean(TelemetryPacket<bool> packet) =>
+            AddPacket(packet.TimestampUtc, packet);
 
         private void AddPacket(DateTime timestamp, object packet)
         {
             lock (_historyLock)
             {
-                if (!_history.TryGetValue(timestamp, out var packets))
-                {
-                    packets = new List<object>();
-                    _history[timestamp] = packets;
-                }
-                packets.Add(packet);
+                _history.Insert(timestamp, packet);
             }
         }
 
-        // Retain the existing methods for callers and tests.
+        // Return all historical readings in ascending timestamp order.
         public IReadOnlyList<object> GetAll()
         {
             lock (_historyLock)
-                return _history.Values.SelectMany(x => x).ToList().AsReadOnly();
+            {
+                return _history.GetAll();
+            }
         }
 
+        // Preserve exact, case-insensitive device filtering.
         public IReadOnlyList<object> GetByDevice(string deviceIdentifier)
         {
             lock (_historyLock)
-                return _history.Values.SelectMany(x => x)
-                    .Where(x => GetDeviceIdentifier(x).Equals(deviceIdentifier, StringComparison.OrdinalIgnoreCase))
-                    .ToList().AsReadOnly();
+            {
+                return _history.GetAll()
+                    .Where(packet =>
+                        GetDeviceIdentifier(packet).Equals(
+                            deviceIdentifier,
+                            StringComparison.OrdinalIgnoreCase))
+                    .ToList()
+                    .AsReadOnly();
+            }
         }
 
-        public IReadOnlyList<object> GetByTimeRange(DateTime startUtc, DateTime endUtc)
+        // Query only relevant AVL subtrees for the requested time range.
+        public IReadOnlyList<object> GetByTimeRange(
+            DateTime startUtc,
+            DateTime endUtc)
         {
             lock (_historyLock)
-                return _history.Where(x => x.Key >= startUtc && x.Key <= endUtc)
-                    .SelectMany(x => x.Value).ToList().AsReadOnly();
+            {
+                return _history.GetRange(startUtc, endUtc);
+            }
         }
 
         public int GetTotalCount()
         {
             lock (_historyLock)
-                return _history.Values.Sum(x => x.Count);
+            {
+                return _history.Count;
+            }
         }
 
-        // Filter before limiting; iterate the sorted timeline newest-first.
+        // Filter before limiting and return newest matching readings first.
         public IReadOnlyList<object> GetRecent(
-            DateTime startUtc, DateTime endUtc, int limit,
-            string? deviceIdentifier = null, string? metric = null)
+            DateTime startUtc,
+            DateTime endUtc,
+            int limit,
+            string? deviceIdentifier = null,
+            string? metric = null)
         {
             limit = Math.Clamp(limit, 1, 100);
-            var result = new List<object>(limit);
 
             lock (_historyLock)
             {
-                foreach (var entry in _history.Reverse())
-                {
-                    if (entry.Key > endUtc) continue;
-                    if (entry.Key < startUtc) break;
-
-                    for (int i = entry.Value.Count - 1; i >= 0; i--)
+                return _history.GetRecent(
+                    startUtc,
+                    endUtc,
+                    limit,
+                    packet =>
                     {
-                        var packet = entry.Value[i];
                         if (!string.IsNullOrWhiteSpace(deviceIdentifier) &&
-                            !GetDeviceIdentifier(packet).Contains(deviceIdentifier, StringComparison.OrdinalIgnoreCase))
-                            continue;
-                        if (!string.IsNullOrWhiteSpace(metric) &&
-                            !GetMetricName(packet).Contains(metric, StringComparison.OrdinalIgnoreCase))
-                            continue;
+                            !GetDeviceIdentifier(packet).Contains(
+                                deviceIdentifier,
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
 
-                        result.Add(packet);
-                        if (result.Count == limit) return result.AsReadOnly();
-                    }
-                }
+                        if (!string.IsNullOrWhiteSpace(metric) &&
+                            !GetMetricName(packet).Contains(
+                                metric,
+                                StringComparison.OrdinalIgnoreCase))
+                        {
+                            return false;
+                        }
+
+                        return true;
+                    });
             }
-            return result.AsReadOnly();
         }
 
-        private static string GetDeviceIdentifier(object packet) => packet switch
-        {
-            TelemetryPacket<float> p => p.DeviceIdentifier,
-            TelemetryPacket<int> p => p.DeviceIdentifier,
-            TelemetryPacket<bool> p => p.DeviceIdentifier,
-            _ => string.Empty
-        };
+        private static string GetDeviceIdentifier(object packet) =>
+            packet switch
+            {
+                TelemetryPacket<float> p => p.DeviceIdentifier,
+                TelemetryPacket<int> p => p.DeviceIdentifier,
+                TelemetryPacket<bool> p => p.DeviceIdentifier,
+                _ => string.Empty
+            };
 
-        private static string GetMetricName(object packet) => packet switch
-        {
-            TelemetryPacket<float> p => p.MetricName,
-            TelemetryPacket<int> p => p.MetricName,
-            TelemetryPacket<bool> p => p.MetricName,
-            _ => string.Empty
-        };
+        private static string GetMetricName(object packet) =>
+            packet switch
+            {
+                TelemetryPacket<float> p => p.MetricName,
+                TelemetryPacket<int> p => p.MetricName,
+                TelemetryPacket<bool> p => p.MetricName,
+                _ => string.Empty
+            };
     }
 }
