@@ -8,78 +8,7 @@
 
 <div class="dashboard-page">
 
-    <aside class="sidebar">
-        <a class="sidebar-brand" href="/">
-            <div class="brand-mark">SX</div>
-            <div>
-                <strong>Smart-X</strong>
-                <span>IoT Mesh</span>
-            </div>
-        </a>
-
-        <nav class="sidebar-nav">
-            <span class="nav-label">TELEMETRY WORKSPACE</span>
-
-            <a class="nav-item active" href="/dashboard">
-                <span class="nav-icon">⌂</span>
-                Dashboard
-            </a>
-
-            <a class="nav-item" href="/sensors">
-                <span class="nav-icon">◉</span>
-                Sensors
-            </a>
-
-            <a class="nav-item" href="/telemetry">
-                <span class="nav-icon">⌁</span>
-                Telemetry
-            </a>
-
-            <a class="nav-item" href="/alerts">
-                <span class="nav-icon">!</span>
-                Attention Centre
-
-                @if (!loading && alertCount > 0)
-                {
-                    <span class="nav-count">@alertCount</span>
-                }
-            </a>
-
-            <span class="nav-label secondary-label">MANAGEMENT</span>
-
-            <a class="nav-item" href="/attachments">
-                <span class="nav-icon">□</span>
-                Attachments
-            </a>
-
-            <a class="nav-item" href="/deployment">
-                <span class="nav-icon">⌘</span>
-                Deployment Validation
-            </a>
-
-            <!-- Part 2 workspaces -->
-            <span class="nav-label secondary-label">COMMAND MANAGEMENT</span>
-
-            <a class="nav-item" href="/commands">
-                <span class="nav-icon">⇄</span>
-                Command Stream &amp; History
-            </a>
-
-            <a class="nav-item" href="/history">
-                <span class="nav-icon">◷</span>
-                Historical Telemetry
-            </a>
-        </nav>
-
-        <div class="sidebar-footer">
-            <span class="sidebar-status">
-                <span class="status-dot"></span>
-                Gateway connected
-            </span>
-
-            <span>Smart-X Part 2</span>
-        </div>
-    </aside>
+    <SmartXSidebar CurrentPage="dashboard" AlertCount="@alertCount" />
 
     <div class="dashboard-main">
 

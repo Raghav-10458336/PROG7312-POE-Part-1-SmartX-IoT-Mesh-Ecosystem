@@ -1,0 +1,144 @@
+﻿
+.sidebar {
+    min-height: 100vh;
+    background: #111820;
+    color: #d5dce2;
+    padding: 24px 17px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: #35434d #111820;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 8px 25px;
+    color: white;
+    text-decoration: none;
+    border-bottom: 1px solid #27313b;
+    flex-shrink: 0;
+}
+
+.brand-mark {
+    width: 38px;
+    height: 38px;
+    background: #0f7781;
+    color: white;
+    border-radius: 8px;
+    display: grid;
+    place-items: center;
+    font-size: 13px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.sidebar-brand strong {
+    display: block;
+    font-size: 16px;
+}
+
+.sidebar-brand span {
+    color: #84919d;
+    font-size: 10px;
+}
+
+.sidebar-nav {
+    margin-top: 27px;
+    flex: 1 0 auto;
+}
+
+.nav-label {
+    display: block;
+    padding: 0 11px 8px;
+    color: #687581;
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+}
+
+.secondary-label {
+    margin-top: 27px;
+}
+
+.nav-item {
+    min-height: 43px;
+    margin-bottom: 4px;
+    padding: 0 11px;
+    border-radius: 7px;
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    color: #aeb8c1;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 600;
+    box-sizing: border-box;
+}
+
+    .nav-item:hover {
+        background: #18232d;
+        color: white;
+    }
+
+    .nav-item.active {
+        background: #17343a;
+        color: #d9f1f2;
+    }
+
+.nav-icon {
+    width: 20px;
+    flex-shrink: 0;
+    text-align: center;
+    font-size: 15px;
+}
+
+.nav-count {
+    margin-left: auto;
+    min-width: 24px;
+    padding: 3px 6px;
+    background: #9d3d3d;
+    color: white;
+    border-radius: 12px;
+    text-align: center;
+    font-size: 9px;
+}
+
+.sidebar-footer {
+    margin-top: auto;
+    padding: 18px 10px 2px;
+    border-top: 1px solid #27313b;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    color: #687581;
+    font-size: 10px;
+    flex-shrink: 0;
+}
+
+.sidebar-status {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    color: #9eabb5;
+}
+
+.status-dot {
+    width: 7px;
+    height: 7px;
+    background: #3bb273;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+@media (max-width: 760px) {
+    .sidebar {
+        display: none;
+    }
+}
