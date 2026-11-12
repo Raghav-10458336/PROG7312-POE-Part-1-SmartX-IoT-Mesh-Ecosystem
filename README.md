@@ -1,11 +1,11 @@
 # Smart-X IoT Mesh Ecosystem
 
-## PROG7312 — Portfolio of Evidence (POE) — Final Part 3
+## PROG7312 - Portfolio of Evidence (POE) - Final Part 3
 
 **Student:** Raghav Mahraj  
 **Student Number:** ST10458336  
 **Module:** PROG7312  
-**Assessment:** Final POE — Part 3  
+**Assessment:** Final POE - Part 3  
 **Project:** Smart-X IoT Mesh Ecosystem  
 **Technology:** C# / .NET 10 / ASP.NET Core Web API / Blazor WebAssembly  
 
@@ -13,15 +13,15 @@
 
 | Assessment | YouTube demonstration |
 |---|---|
-| **Final POE — Part 3** | **[ADD FINAL PART 3 YOUTUBE VIDEO LINK]** |
-| **POE — Part 2** | https://www.youtube.com/watch?v=vk7PITxr740 |
-| **POE — Part 1** | **[ADD PART 1 YOUTUBE VIDEO LINK]** |
+| **Final POE - Part 3** | **[ADD FINAL PART 3 YOUTUBE VIDEO LINK]** |
+| **POE - Part 2** | https://www.youtube.com/watch?v=vk7PITxr740 |
+| **POE - Part 1** | **[ADD PART 1 YOUTUBE VIDEO LINK]** |
 
 > Watch videos at the highest available quality. Replace the two placeholders before submission. The Part 2 link is retained from the previous README.
 
 ---
 
-# Final Part 3 — Start Here
+# Final Part 3 - Start Here
 
 Smart-X is a simulated IoT management gateway that integrates **all three assessment phases** in one .NET solution. The final phase adds a **self-balancing AVL Tree** for historical telemetry queries and a **weighted graph** representing an ESP32 mesh network. The Blazor WebAssembly client exposes the three working modules through the startup gateway: **Telemetry** (`/dashboard`), **Command Stream & History** (`/commands`), and **Mesh Topology & Routing** (`/mesh`). The sidebar also exposes Historical Telemetry (`/history`).
 
@@ -41,7 +41,7 @@ Smart-X is a simulated IoT management gateway that integrates **all three assess
 - [Complexity, Trade-offs and Limitations](#complexity-trade-offs-and-limitations)
 - [Troubleshooting and Common Issues](#troubleshooting-and-common-issues)
 - [Assessment and Submission Checklist](#assessment-and-submission-checklist)
-- [Previous README — Parts 1 and 2](#previous-readme-parts-1-and-2)
+- [Previous README - Parts 1 and 2](#previous-readme-parts-1-and-2)
 
 ---
 
@@ -98,17 +98,17 @@ Alternatively, in Visual Studio use **Build → Build Solution** and **Test → 
 
 ## 5. Start BOTH applications
 
-**Recommended — Visual Studio:** right-click the solution → **Configure Startup Projects** → **Multiple startup projects** → set `SmartX.Api` and `SmartX.Client` to **Start** → run the solution. `SmartX.Shared` and `SmartX.Tests` are not web servers and should not be started as separate applications.
+**Recommended - Visual Studio:** right-click the solution → **Configure Startup Projects** → **Multiple startup projects** → set `SmartX.Api` and `SmartX.Client` to **Start** → run the solution. `SmartX.Shared` and `SmartX.Tests` are not web servers and should not be started as separate applications.
 
-**Alternative — two PowerShell terminals** (both commands run from the solution directory):
+**Alternative - two PowerShell terminals** (both commands run from the solution directory):
 
-**Terminal A — API (start this first):**
+**Terminal A - API (start this first):**
 
 ```powershell
 dotnet run --project .\SmartX.Api\SmartX.Api.csproj --launch-profile https
 ```
 
-**Terminal B — Blazor client:**
+**Terminal B - Blazor client:**
 
 ```powershell
 dotnet run --project .\SmartX.Client\SmartX.Client.csproj --launch-profile https
@@ -183,10 +183,10 @@ flowchart TD
 
 **Project responsibilities:**
 
-- `SmartX.Api` — HTTP controllers, simulation, ingestion, historical indexing and graph algorithms.
-- `SmartX.Client` — Blazor pages, dashboard cards, filters and network visualisation.
-- `SmartX.Shared` — telemetry packets, models, enums and shared types.
-- `SmartX.Tests` — automated regression, data-structure and algorithm tests.
+- `SmartX.Api` - HTTP controllers, simulation, ingestion, historical indexing and graph algorithms.
+- `SmartX.Client` - Blazor pages, dashboard cards, filters and network visualisation.
+- `SmartX.Shared` - telemetry packets, models, enums and shared types.
+- `SmartX.Tests` - automated regression, data-structure and algorithm tests.
 
 ## Data lifecycle
 
@@ -218,7 +218,7 @@ Part 3 requires a binary search tree, AVL Tree or Red-Black Tree to index **time
 
 An AVL Tree is a binary search tree where the height difference between a node's left and right subtrees is at most one. Rotations maintain balance after insertion, avoiding the long linear chains that can form in an ordinary unbalanced BST.
 
-**Index:** `AvlTree<DateTime, object>` — the UTC timestamp is the ordering key; the value is a telemetry packet. A node stores a **list of values** so multiple readings with identical timestamps are preserved rather than overwritten.
+**Index:** `AvlTree<DateTime, object>` - the UTC timestamp is the ordering key; the value is a telemetry packet. A node stores a **list of values** so multiple readings with identical timestamps are preserved rather than overwritten.
 
 ## AVL rotations
 
@@ -371,7 +371,7 @@ PROG7312.POE.Part1/
 │   │   └── AvlTree.cs
 │   ├── Controllers/
 │   │   ├── HistoryController.cs
-│   │   └── [Mesh controller / route implementation — inspect source]
+│   │   └── [Mesh controller / route implementation - inspect source]
 │   ├── Services/
 │   │   ├── HistoricalTelemetryService.cs
 │   │   ├── MeshNetworkService.cs
@@ -609,7 +609,7 @@ The submitted material does not include the lecturer's exact feedback text or da
 
 ---
 
-# Previous README — Parts 1 and 2
+# Previous README - Parts 1 and 2
 
 > **Historical documentation preserved below.** The following is the earlier Part 2 README retained for completeness and traceability. Its descriptions of **Part 3 as “coming soon”**, **`02 / 03` active modules**, the **Part 2 `SortedDictionary` historical index**, **Part 2-specific commit counts/branch names**, and **Part 2 assessment status** describe the *previous submission*, not the current Final Part 3 application. For the current architecture, setup, user guide, AVL implementation, mesh graph and final verification, use the **Final Part 3 sections above**. The historical Part 2 video URL remains valid as supplied.
 
@@ -638,9 +638,9 @@ The Part 1 implementation focuses on the first Smart-X management pillar:
 
 The platform is organised into three pillars:
 
-- **Sensor Data Ingestion and Telemetry** — implemented in Part 1 and retained.
-- **Real-Time Command Stream and History** — implemented in Part 2.
-- **Network Topology and Mesh Routing** — reserved for the final POE; not represented as a completed Part 2 module.
+- **Sensor Data Ingestion and Telemetry** - implemented in Part 1 and retained.
+- **Real-Time Command Stream and History** - implemented in Part 2.
+- **Network Topology and Mesh Routing** - reserved for the final POE; not represented as a completed Part 2 module.
 
 ---
 
@@ -1618,7 +1618,7 @@ Postman can also be used for direct API testing.
 
 ---
 
-## Step 1 — Clone the Repository
+## Step 1 - Clone the Repository
 
 Clone the repository using Git:
 
@@ -1630,7 +1630,7 @@ Alternatively, clone the repository through Visual Studio or GitHub Desktop.
 
 ---
 
-## Step 2 — Open the Solution
+## Step 2 - Open the Solution
 
 Navigate to the cloned repository and open:
 
@@ -1642,7 +1642,7 @@ using Visual Studio 2026.
 
 ---
 
-## Step 3 — Restore Dependencies
+## Step 3 - Restore Dependencies
 
 Visual Studio should restore required NuGet packages automatically.
 
@@ -1654,7 +1654,7 @@ dotnet restore
 
 ---
 
-## Step 4 — Configure the Encryption Key
+## Step 4 - Configure the Encryption Key
 
 Navigate to:
 
@@ -1686,7 +1686,7 @@ Do not place the real key in `appsettings.json`.
 
 ---
 
-## Step 5 — Configure Startup Projects
+## Step 5 - Configure Startup Projects
 
 Both the API and frontend must run for the complete application.
 
@@ -1702,7 +1702,7 @@ In Visual Studio:
 
 ---
 
-## Step 6 — Build the Solution
+## Step 6 - Build the Solution
 
 From Visual Studio:
 
@@ -2402,7 +2402,7 @@ The following procedures provide a structured method for demonstrating the Part 
 
 They can be completed through the running application, with automated tests used to verify internal collection behaviour.
 
-## Test 1 — Main Menu and Navigation
+## Test 1 - Main Menu and Navigation
 
 **Objective:** Verify that Part 1 and Part 2 modules remain accessible and operational.
 
@@ -2425,7 +2425,7 @@ The application supports navigation between implemented modules without breaking
 
 The Network Topology and Mesh Routing module remains unavailable because it belongs to the final POE.
 
-## Test 2 — Standard FIFO Queue
+## Test 2 - Standard FIFO Queue
 
 **Objective:** Verify that ordinary telemetry is processed in first-in, first-out order.
 
@@ -2441,7 +2441,7 @@ The Network Topology and Mesh Routing module remains unavailable because it belo
 
 Ordinary telemetry packets retain FIFO processing order.
 
-## Test 3 — Critical Priority Queue
+## Test 3 - Critical Priority Queue
 
 **Objective:** Verify that critical telemetry receives higher processing priority than ordinary telemetry.
 
@@ -2459,7 +2459,7 @@ Ordinary telemetry packets retain FIFO processing order.
 
 Critical conditions are detected and prioritised by the processing implementation.
 
-## Test 4 — Manual Device Control
+## Test 4 - Manual Device Control
 
 **Objective:** Verify that simulated actuator commands are validated and executed correctly.
 
@@ -2481,7 +2481,7 @@ Valid confirmed commands update the simulated device state and are recorded in c
 
 Cancelled commands do not modify the state.
 
-## Test 5 — Stack-Based Undo
+## Test 5 - Stack-Based Undo
 
 **Objective:** Verify last-in, first-out reversal of manual override commands.
 
@@ -2500,7 +2500,7 @@ Cancelled commands do not modify the state.
 
 Commands are reversed in LIFO order.
 
-## Test 6 — Dictionary-Based Device Lookup
+## Test 6 - Dictionary-Based Device Lookup
 
 **Objective:** Verify that registered devices can be retrieved using unique identifiers.
 
@@ -2519,7 +2519,7 @@ Commands are reversed in LIFO order.
 
 Device identifiers uniquely identify registered devices, and dictionary-backed lookup returns the corresponding device.
 
-## Test 7 — Sorted Historical Telemetry
+## Test 7 - Sorted Historical Telemetry
 
 **Objective:** Verify timestamp-based historical retrieval and filtering.
 
@@ -2540,7 +2540,7 @@ Device identifiers uniquely identify registered devices, and dictionary-backed l
 
 Historical telemetry can be retrieved and filtered accurately using timestamp, device and metric criteria.
 
-## Test 8 — HashSet Fault Deduplication
+## Test 8 - HashSet Fault Deduplication
 
 **Objective:** Verify that repeated identical active faults do not create duplicate unique-fault entries.
 
@@ -2558,7 +2558,7 @@ Historical telemetry can be retrieved and filtered accurately using timestamp, d
 
 Repeated occurrences of the same active fault are not counted as separate unique fault identities.
 
-## Test 9 — Suggested Actions
+## Test 9 - Suggested Actions
 
 **Objective:** Verify that the application identifies operational patterns and provides relevant navigation.
 
@@ -2578,7 +2578,7 @@ Repeated occurrences of the same active fault are not counted as separate unique
 
 Recommendations identify qualifying operational conditions and direct operators to the relevant investigation interface.
 
-## Test 10 — Regression Testing
+## Test 10 - Regression Testing
 
 **Objective:** Verify that Part 2 additions have not broken Part 1 functionality.
 
@@ -2925,7 +2925,7 @@ The Part 2 implementation addresses five principal assessment categories.
 | Predictive Action and Recommendation Engine | 30 | Historical pattern detection, active fault analysis and contextual recommendations |
 | **Total** | **100** | |
 
-## Main Menu, Navigation and Active State — 30 Marks
+## Main Menu, Navigation and Active State - 30 Marks
 
 Smart-X provides a structured startup interface and integrated operational navigation.
 
@@ -2937,7 +2937,7 @@ Contextual navigation allows a suggested action to open the relevant investigati
 
 The Network Topology and Mesh Routing module remains reserved for the final POE.
 
-## Stacks, Queues and Priority Queues — 15 Marks
+## Stacks, Queues and Priority Queues - 15 Marks
 
 The Part 2 implementation demonstrates three distinct collection behaviours.
 
@@ -2955,7 +2955,7 @@ Manual override commands are recorded in a stack to support last-in, first-out U
 
 Each collection is associated with an operational requirement and can be tested through the application and automated tests.
 
-## Dictionaries and Sorted Dictionaries — 15 Marks
+## Dictionaries and Sorted Dictionaries - 15 Marks
 
 A dictionary provides key-based access to registered devices.
 
@@ -2968,7 +2968,7 @@ These structures support different access patterns:
 
 The historical workspace allows operators to filter readings by device, metric and UTC date/time range.
 
-## HashSet — 10 Marks
+## HashSet - 10 Marks
 
 A HashSet tracks unique active fault identities.
 
@@ -2976,7 +2976,7 @@ This prevents repeated detections of the same unresolved fault from being counte
 
 The distinction between historical alert events and active unique faults allows the application to retain diagnostic information without unnecessarily inflating the current fault count.
 
-## Predictive Action and Recommendation Engine — 30 Marks
+## Predictive Action and Recommendation Engine - 30 Marks
 
 Smart-X includes a rule-based recommendation engine that evaluates historical telemetry patterns and active operational faults.
 
@@ -3246,6 +3246,6 @@ The resulting architecture provides a foundation for the Network Topology and Me
 **Raghav Mahraj**  
 **Student Number:** ST10458336  
 **Module:** PROG7312  
-**Assessment:** Portfolio of Evidence — Part 2  
+**Assessment:** Portfolio of Evidence - Part 2  
 **Project:** Smart-X IoT Mesh Ecosystem  
 **Technology:** C# / .NET 10 / ASP.NET Core Web API / Blazor WebAssembly
