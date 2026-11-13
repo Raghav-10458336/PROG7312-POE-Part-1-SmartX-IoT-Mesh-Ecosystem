@@ -1,60 +1,617 @@
+# Smart-X IoT Mesh Ecosystem
 
-# Smart-X IoT Mesh Ecosystem — PROG7312 POE Part 2
-
-Real-Time Processing and Device Management, extending the Part 1 Sensor Data Ingestion and Telemetry gateway. Developed with C# and .NET 10 using ASP.NET Core Web API and Blazor WebAssembly.
+## PROG7312 - Portfolio of Evidence (POE) - Final Part 3
 
 **Student:** Raghav Mahraj  
 **Student Number:** ST10458336  
 **Module:** PROG7312  
-**Assessment:** POE Part 2  
+**Assessment:** Final POE - Part 3  
 **Project:** Smart-X IoT Mesh Ecosystem  
-**Youtube Link (please use highest available video quality settings):** https://www.youtube.com/watch?v=vk7PITxr740 
+**Technology:** C# / .NET 10 / ASP.NET Core Web API / Blazor WebAssembly  
 
+### Demonstration Videos
+
+| Assessment | YouTube demonstration |
+|---|---|
+| **Final POE - Part 3** | **[ADD FINAL PART 3 YOUTUBE VIDEO LINK]** |
+| **POE - Part 2** | https://www.youtube.com/watch?v=vk7PITxr740 |
+| **POE - Part 1** | **[ADD PART 1 YOUTUBE VIDEO LINK]** |
+
+> Watch videos at the highest available quality. Replace the two placeholders before submission. The Part 2 link is retained from the previous README.
 
 ---
 
-## Table of Contents
+# Final Part 3 - Start Here
 
-1. [Project Overview](#project-overview)
-2. [System Architecture](#system-architecture)
-3. [Technology Stack](#technology-stack)
-4. [Project Structure](#project-structure)
-5. [Core Features](#core-features)
-6. [Sensor Registration](#sensor-registration)
-7. [Telemetry Ingestion](#telemetry-ingestion)
-8. [Mock IoT Deployment](#mock-iot-deployment)
-9. [Generics](#generics)
-10. [Jagged Arrays and Collections](#jagged-arrays-and-collections)
-11. [Operator Overloading](#operator-overloading)
-12. [Recursive Deployment Validation](#recursive-deployment-validation)
-13. [Attention Centre](#attention-centre)
-14. [Alert Acknowledgement](#alert-acknowledgement)
-15. [Sensor Connectivity Monitoring](#sensor-connectivity-monitoring)
-16. [Telemetry Monitoring and Filtering](#telemetry-monitoring-and-filtering)
-17. [Bounded Telemetry Retrieval](#bounded-telemetry-retrieval)
-18. [Telemetry Summary](#telemetry-summary)
-19. [Secure File Attachments](#secure-file-attachments)
-20. [Attachment Security](#attachment-security)
-21. [Encryption Key Configuration](#encryption-key-configuration)
-22. [API Endpoints](#api-endpoints)
-23. [Application Setup](#application-setup)
-24. [Running the Application](#running-the-application)
-25. [Application Navigation](#application-navigation)
-26. [Testing the Application](#testing-the-application)
-27. [HTTP Response Behaviour](#http-response-behaviour)
-28. [Part 2 Overview and Scope](#part-2-overview-and-scope)
-29. [Real-Time Command Stream and Device Control](#real-time-command-stream-and-device-control)
-30. [Part 2 Data Structures](#part-2-data-structures)
-31. [Historical Telemetry and Sorted Timeline](#historical-telemetry-and-sorted-timeline)
-32. [Suggested Actions and Pattern Analysis](#suggested-actions-and-pattern-analysis)
-33. [Part 2 API Reference](#part-2-api-reference)
-34. [Part 2 Verification and Test Procedures](#part-2-verification-and-test-procedures)
-35. [Automated Tests](#automated-tests)
-36. [Troubleshooting](#troubleshooting)
-37. [Part 2 Rubric Coverage](#part-2-rubric-coverage)
-38. [Repository and Submission](#repository-and-submission)
-39. [Important Development Notes](#important-development-notes)
-40. [Smart-X Part 2 Summary](#smart-x-part-2-summary)
+Smart-X is a simulated IoT management gateway that integrates **all three assessment phases** in one .NET solution. The final phase adds a **self-balancing AVL Tree** for historical telemetry queries and a **weighted graph** representing an ESP32 mesh network. The Blazor WebAssembly client exposes the three working modules through the startup gateway: **Telemetry** (`/dashboard`), **Command Stream & History** (`/commands`), and **Mesh Topology & Routing** (`/mesh`). The sidebar also exposes Historical Telemetry (`/history`).
+
+**Latest verification reported by the developer (12 November 2026):** the solution builds, **146 of 146 automated tests pass**, and all three startup module links work. This is a development verification result, not a guarantee of marks.
+
+## Quick Navigation
+
+- [Quick Start: PowerShell and Visual Studio](#quick-start-powershell-and-visual-studio)
+- [User Guide: Every Page](#user-guide-every-page)
+- [Part 3 Architecture and Data Flow](#part-3-architecture-and-data-flow)
+- [Part 3 Implementation A: AVL Tree](#part-3-implementation-a-avl-tree)
+- [Part 3 Implementation B: ESP32 Mesh Graph](#part-3-implementation-b-esp32-mesh-graph)
+- [Part 3 API and Source Code Map](#part-3-api-and-source-code-map)
+- [Part 3 Verification and Demonstration](#part-3-verification-and-demonstration)
+- [Automated Tests and Evidence](#automated-tests-and-evidence)
+- [Changes and Improvements Across Parts](#changes-and-improvements-across-parts)
+- [Complexity, Trade-offs and Limitations](#complexity-trade-offs-and-limitations)
+- [Troubleshooting and Common Issues](#troubleshooting-and-common-issues)
+- [Assessment and Submission Checklist](#assessment-and-submission-checklist)
+- [Previous README - Parts 1 and 2](#previous-readme-parts-1-and-2)
+
+---
+
+# Quick Start: PowerShell and Visual Studio
+
+## Prerequisites
+
+- Windows with **Visual Studio 2026** and the ASP.NET/web development workload.
+- **.NET 10 SDK**, Git, and a modern browser.
+- Internet access on first restore for NuGet packages.
+- PowerShell or the Visual Studio integrated terminal.
+- Postman is optional; no physical ESP32 devices, database server, Node.js server, Docker container or separate message broker is required for the demonstrated in-memory simulation.
+
+## 1. Clone and open
+
+```powershell
+git clone https://github.com/Raghav-10458336/PROG7312-POE-Part-1-SmartX-IoT-Mesh-Ecosystem.git
+cd PROG7312-POE-Part-1-SmartX-IoT-Mesh-Ecosystem\PROG7312.POE.Part1
+```
+
+Open `PROG7312.POE.Part1.sln` in Visual Studio. If the repository is already cloned, open the existing solution instead; **do not reclone over local work**. Check out the branch containing the final Part 3 submission and confirm the branch name on GitHub before assessing.
+
+## 2. Trust the local HTTPS development certificate (first-time setup)
+
+```powershell
+dotnet dev-certs https --trust
+```
+
+Accept the Windows certificate prompt. This enables HTTPS development on localhost; it does not deploy the application publicly.
+
+## 3. Configure the attachment encryption key (first-time setup)
+
+From the solution directory:
+
+```powershell
+cd .\SmartX.Api
+dotnet user-secrets init
+$key = [Convert]::ToBase64String([Security.Cryptography.RandomNumberGenerator]::GetBytes(32))
+dotnet user-secrets set "AttachmentEncryption:MasterKey" "$key"
+cd ..
+```
+
+**Never commit the generated key.** This configuration is needed for encrypted attachment functionality. The exact existing project settings should be retained; do not replace the key on an installation that needs to decrypt older attachments.
+
+## 4. Restore, build and test
+
+```powershell
+dotnet restore .\PROG7312.POE.Part1.sln
+dotnet build .\PROG7312.POE.Part1.sln
+dotnet test .\PROG7312.POE.Part1.sln
+```
+
+Alternatively, in Visual Studio use **Build → Build Solution** and **Test → Run All Tests**. The last reported complete test run passed **146/146** tests; compare your local result with the current branch and environment.
+
+## 5. Start BOTH applications
+
+**Recommended - Visual Studio:** right-click the solution → **Configure Startup Projects** → **Multiple startup projects** → set `SmartX.Api` and `SmartX.Client` to **Start** → run the solution. `SmartX.Shared` and `SmartX.Tests` are not web servers and should not be started as separate applications.
+
+**Alternative - two PowerShell terminals** (both commands run from the solution directory):
+
+**Terminal A - API (start this first):**
+
+```powershell
+dotnet run --project .\SmartX.Api\SmartX.Api.csproj --launch-profile https
+```
+
+**Terminal B - Blazor client:**
+
+```powershell
+dotnet run --project .\SmartX.Client\SmartX.Client.csproj --launch-profile https
+```
+
+If the HTTPS launch profile has a different name in the checked-out version, inspect `Properties/launchSettings.json` and use that exact name. Avoid launching an extra duplicate API process if Visual Studio is already running it.
+
+| Application | Development URL | Purpose |
+|---|---|---|
+| API | `https://localhost:7113` | REST endpoints, telemetry ingestion, history, commands, alerts, mesh algorithms |
+| Blazor client | `https://localhost:7292` | User interface, dashboards, filters, visualisations |
+
+The above are the documented Part 2 HTTPS addresses; confirm the current `launchSettings.json` if a port differs. Open the **client** URL in the browser. Keep both server processes running. The API starts the mock seeder and mesh topology initialiser automatically; **no additional seeder command** is required.
+
+## 6. Expected initial state
+
+- **24 registered simulated sensors**: eight environmental, eight power and eight actuator devices.
+- **6,000 startup telemetry readings**: 2,400 float, 2,000 integer and 1,600 Boolean packets.
+- Startup dashboard shows **03 / 03 active modules**.
+- Module cards navigate to `/dashboard`, `/commands` and `/mesh`.
+- Historical Telemetry uses the API's in-memory AVL index.
+
+> Important: `MockTelemetrySeeder.Seed()` executes at API startup, not on a recurring timer. Most seeded timestamps cluster around startup time; three intentionally older sensor timestamps model disconnections. Restarting the API recreates in-memory data. This is expected and is not a historical-query defect.
+
+---
+
+# User Guide: Every Page
+
+| Page / workspace | What it does | Typical user action |
+|---|---|---|
+| **Home / Smart-X Gateway** (`/`) | Gateway status, sensor and packet counts, three assessment modules | Select Telemetry, Commands or Mesh; verify `03 / 03` active |
+| **Operations Dashboard** (`/dashboard`) | Part 1 gateway overview and access to monitoring functions | Review gateway statistics and navigate to management pages |
+| **Sensors** | Registry of simulated ESP32 devices, locations and categories | Register a device, inspect details, verify duplicate protection, remove a test device |
+| **Telemetry** | Submit and inspect float, integer and Boolean readings; filters and power analysis | Choose a registered sensor, metric, unit and value; submit and refresh |
+| **Attention Centre** (`/alerts`) | Warning/critical conditions, connectivity faults and acknowledgements | Inspect a fault, acknowledge an alert, distinguish active faults from historical alerts |
+| **Attachments** | Upload and list encrypted sensor-associated files | Select a sensor, upload a supported file (maximum 10 MB), inspect the stored attachment |
+| **Deployment Validation** | Recursively validates a nested facility/zone/sensor hierarchy | Submit valid and invalid nested configurations and compare results |
+| **Command Stream & History** (`/commands`) | Part 2 device lookup, simulated Pump/Relay/Valve control, command history, Undo and suggested actions | Select an active device, confirm an override, inspect history, Undo |
+| **Historical Telemetry** (`/history`) | Part 3 AVL-backed time-range queries with device/metric filters | Choose UTC start/end, filter, Apply, Reset, inspect newest matching records |
+| **Mesh Topology** (`/mesh`) | Part 3 graph visualisation, connectivity, MST, shortest paths and failure/recovery | Select nodes, compare routes, inspect reachability, simulate failure and recovery |
+
+**Navigation:** the three home cards are high-level entry points, not the only pages. Use the management sidebar to reach supporting pages. The exact sidebar label may differ slightly from the page title.
+
+## Suggested first-time walkthrough
+
+1. Open `/` and check **Gateway Online**, **24 sensors**, **6,000 packets**, **03 / 03 modules**.
+2. Select **Sensor Data Ingestion & Telemetry**; inspect Sensors, Telemetry and Attention Centre.
+3. Return home and open **Real-Time Command Stream & History**; inspect an active device and test a reversible command.
+4. Open **Historical Telemetry**; select a UTC range containing the seeded readings and apply device/metric filters.
+5. Return home and open **Network Topology & Mesh Routing**; inspect graph nodes, BFS, Prim MST and Dijkstra routes.
+6. Demonstrate a node or link failure, then restore it before ending the demo.
+7. Open Visual Studio Test Explorer and show the passing test suite.
+
+---
+
+# Part 3 Architecture and Data Flow
+
+```mermaid
+flowchart TD
+    UI[Blazor WebAssembly client] -->|HTTPS / JSON| API[ASP.NET Core Web API]
+    API --> ING[Telemetry ingestion / background processing]
+    ING --> BUF[Generic telemetry buffers]
+    ING --> AVL[AVL Tree indexed by UTC timestamp]
+    ING --> ALERT[Alert evaluation]
+    API --> CMD[Device commands / undo stack]
+    API --> MESH[MeshNetworkService / weighted graph]
+    AVL --> HIST[HistoryController / date-range queries]
+    MESH --> ROUTES[BFS / DFS / Prim MST / Dijkstra]
+    HIST --> UI
+    ROUTES --> UI
+```
+
+**Project responsibilities:**
+
+- `SmartX.Api` - HTTP controllers, simulation, ingestion, historical indexing and graph algorithms.
+- `SmartX.Client` - Blazor pages, dashboard cards, filters and network visualisation.
+- `SmartX.Shared` - telemetry packets, models, enums and shared types.
+- `SmartX.Tests` - automated regression, data-structure and algorithm tests.
+
+## Data lifecycle
+
+```text
+API startup → MockTelemetrySeeder.Seed()
+    → 24 device registrations + 6,000 simulated packets
+    → TelemetryIngestionService.IngestFloat/Integer/Boolean
+    → generic telemetry buffers + alert evaluation
+    → HistoricalTelemetryService.AddFloat/Integer/Boolean
+    → AvlTree<DateTime, object>.Insert(timestampUtc, packet)
+
+Later UI/API POST → TelemetryQueueService
+    → TelemetryProcessingWorker (asynchronous)
+    → TelemetryIngestionService → same buffers / alerts / AVL history
+
+History page → GET /api/history/recent?... → AVL reverse range traversal
+    → device/metric filtering → bounded newest-first results → table
+```
+
+Mesh topology is initialised separately during API startup through `MeshTopologyInitializer`. Mesh nodes and weighted links model the logical network rather than actual radio transmissions.
+
+---
+
+# Part 3 Implementation A: AVL Tree
+
+## Requirement and design choice
+
+Part 3 requires a binary search tree, AVL Tree or Red-Black Tree to index **timestamped historical telemetry** and efficiently retrieve records in a specified time interval. Smart-X implements a **generic self-balancing AVL Tree** (`SmartX.Api/DataStructures/AvlTree.cs`) and uses it inside `HistoricalTelemetryService`.
+
+An AVL Tree is a binary search tree where the height difference between a node's left and right subtrees is at most one. Rotations maintain balance after insertion, avoiding the long linear chains that can form in an ordinary unbalanced BST.
+
+**Index:** `AvlTree<DateTime, object>` - the UTC timestamp is the ordering key; the value is a telemetry packet. A node stores a **list of values** so multiple readings with identical timestamps are preserved rather than overwritten.
+
+## AVL rotations
+
+```text
+LL imbalance (right rotation)       RR imbalance (left rotation)
+       30                                     10
+      /                                        \
+     20               => 20                   20       => 20
+    /                   /  \                    \         /  \
+   10                  10  30                    30      10  30
+
+LR: rotate left on the left child, then right on the node.
+RL: rotate right on the right child, then left on the node.
+```
+
+## Historical insertion example
+
+The following is an illustrative excerpt matching the integration pattern, not a verbatim copy of the service source:
+
+```csharp
+private readonly AvlTree<DateTime, object> _history = new();
+
+public void AddFloat(TelemetryPacket<float> packet)
+{
+    lock (_sync)
+    {
+        _history.Insert(packet.TimestampUtc, packet);
+    }
+}
+```
+
+`HistoricalTelemetryService` similarly handles `TelemetryPacket<int>` and `TelemetryPacket<bool>`. The shared singleton instance means the telemetry ingestion service and history controller operate on the same index. Access is synchronised with a lock around tree operations.
+
+## Range and recent queries
+
+- `GetAll()` returns records in sorted timestamp order.
+- `GetRange(startUtc, endUtc)` returns readings in the **inclusive** interval, pruning branches whose keys cannot match.
+- `GetRecent(startUtc, endUtc, limit, predicate)` walks matching timestamps **newest first**, applies optional device/metric filtering **before** the limit, and returns a bounded result.
+- Duplicate timestamps are supported; all readings stored under a matching key remain eligible.
+- The API validates reversed date ranges and invalid limits; `recent` defaults to 50 and accepts 1–100.
+
+```mermaid
+flowchart TD
+    Q[History request: start/end UTC] --> R{Current AVL key in range?}
+    R -->|Below start| RIGHT[Visit right subtree]
+    R -->|Above end| LEFT[Visit left subtree]
+    R -->|Inside range| MATCH[Evaluate packet and filters]
+    MATCH --> NEXT[Continue relevant branches]
+    NEXT --> LIMIT[Return newest matching records up to limit]
+```
+
+## Complexity and efficiency
+
+| Operation | AVL expectation | Explanation |
+|---|---|---|
+| Insert | `O(log n)` | Height remains logarithmic through rotations |
+| Find a timestamp | `O(log n)` | BST comparisons discard subtrees |
+| Range query | `O(log n + k)` typical | Reach first relevant key and visit `k` returned records; additional work depends on traversal/filtering |
+| Retrieve newest `k` | Approximately `O(log n + k)` when records qualify | Reverse traversal can stop early after the limit; selective filters may require inspecting more candidates |
+| Memory | `O(n)` | In-memory nodes plus packet references |
+
+These are algorithmic characteristics, not measured timings. The tests include larger datasets, but the README does **not** claim unrecorded benchmark measurements.
+
+## How to demonstrate the AVL Tree
+
+1. Start the API and open **Historical Telemetry**.
+2. Set a UTC range that contains the startup readings; click **Apply** and observe rows.
+3. Narrow the range to exclude the readings; observe an empty result.
+4. Restore the range; enter `ESP32-ACT-07` and confirm only that device appears.
+5. Select an appropriate metric; confirm only matching records appear.
+6. Explain that the table shows a **bounded recent result**, not necessarily the total history size.
+7. Show `AvlTree.cs`, `HistoricalTelemetryService.cs`, `HistoryController.cs` and passing AVL tests.
+
+**Time-zone note:** South Africa Standard Time is UTC+2. If a table renders local time, `17:13` local corresponds to `15:13 UTC`; use the page's UTC filter labels and inspect the actual timestamp conversion before concluding a filter is wrong.
+
+**Seeder limitation:** most startup readings are assigned `DateTime.UtcNow` within seconds of each other. Three devices are deliberately assigned older timestamps (`ESP32-ENV-08`: −35 minutes, `ESP32-PWR-07`: −27 minutes, `ESP32-ACT-06`: −22 minutes). The seeder was intentionally left unchanged to preserve connectivity-alert behaviour. A separate AVL visualiser page is **not required** for the implemented time-range querying interface.
+
+---
+
+# Part 3 Implementation B: ESP32 Mesh Graph
+
+## Requirement and representation
+
+The final phase models the ESP32 network as a **weighted graph**: devices and the gateway are vertices, while communication links are edges with numerical weights. Weights represent the simulated routing cost used by the algorithms; they are not measured radio power consumption or real network latency.
+
+`MeshNetworkService` contains the graph and traversal/routing operations. `MeshTopologyInitializer` creates the initial network. The Blazor `Mesh.razor` page renders the topology and its algorithm results.
+
+```mermaid
+flowchart LR
+    G[SMARTX-GATEWAY] --- A[ESP32-ENV-05]
+    A --- B[ESP32-ENV-06]
+    B --- C[ESP32-ENV-07]
+    A --- C
+```
+
+*Illustrative subgraph only, not the complete topology. Actual available nodes, links and weights come from the running `MeshNetworkService`.*
+
+## Breadth-First Search (BFS)
+
+BFS explores neighbouring nodes level by level using a queue. It identifies **reachability** and can produce parent links or a minimum-hop path in an unweighted interpretation of the graph. A node disconnected from the gateway cannot be reached by BFS. Complexity is `O(V + E)` for vertices `V` and edges `E`.
+
+## Depth-First Search (DFS)
+
+DFS follows a branch as deeply as possible before backtracking, using recursion or a stack. It supports graph traversal and connectivity analysis. Complexity is `O(V + E)`. **DFS does not by itself guarantee the fewest hops or minimum weighted route.**
+
+## Prim's Minimum Spanning Tree (MST)
+
+Prim's algorithm grows a spanning tree by repeatedly choosing a minimum-weight edge that connects the current tree to an unvisited vertex. For a connected weighted graph, the result connects every node without cycles and minimises the **sum of included edge weights**. For a disconnected graph, a single spanning tree cannot cover every vertex. Complexity depends on the chosen implementation; a heap-based adjacency-list implementation is typically `O(E log V)`.
+
+**Interpretation:** the MST provides a low-total-cost network backbone, **not** necessarily the shortest route from every sensor to the gateway. It is a simulation of efficient topology design, not proof of measured battery savings.
+
+## Dijkstra's shortest-path algorithm
+
+Dijkstra finds a minimum-total-weight path from a selected source when edge weights are **non-negative**. It serves a different goal from the MST: optimising an individual route rather than the cost of connecting the entire graph.
+
+A verified example from the application's mesh testing was:
+
+| Route | Path | Hops | Total weight |
+|---|---|---:|---:|
+| Dijkstra | `ESP32-ENV-07 → ESP32-ENV-05 → SMARTX-GATEWAY` | 2 | 5.0 |
+| Route along MST | `ESP32-ENV-07 → ESP32-ENV-06 → ESP32-ENV-05 → SMARTX-GATEWAY` | 3 | 5.5 |
+
+This example illustrates why **MST routing and shortest-path routing are not interchangeable**. It is a previously observed example; recheck the current graph if topology state has changed.
+
+## Failure and recovery simulation
+
+The Mesh page allows simulated **node failures**, **link failures** and recovery. These operations change the available topology and therefore can change reachability, highlighted paths and spanning-tree results. Restore failed nodes/links before concluding the demonstration. These simulations do not disable physical ESP32 hardware.
+
+## How to demonstrate the graph algorithms
+
+1. Open **Mesh Topology** from the third startup card.
+2. Show the nodes, gateway and weighted links; select a node and inspect its details.
+3. Run/inspect **BFS reachability** and its parent connections.
+4. Inspect the **Prim MST** highlighting and total cost where displayed.
+5. Select a source/destination and inspect the **Dijkstra** route; compare with the MST route.
+6. Simulate a node or link failure; explain which paths or connectivity results change.
+7. Recover the failed element and confirm the network representation updates.
+8. Show `MeshNetworkServiceTests.cs` to demonstrate algorithm-level verification.
+
+---
+
+# Part 3 API and Source Code Map
+
+## Part 3 source files
+
+```text
+PROG7312.POE.Part1/
+├── SmartX.Api/
+│   ├── DataStructures/
+│   │   └── AvlTree.cs
+│   ├── Controllers/
+│   │   ├── HistoryController.cs
+│   │   └── [Mesh controller / route implementation - inspect source]
+│   ├── Services/
+│   │   ├── HistoricalTelemetryService.cs
+│   │   ├── MeshNetworkService.cs
+│   │   ├── MeshTopologyInitializer.cs
+│   │   ├── TelemetryIngestionService.cs
+│   │   └── MockTelemetrySeeder.cs
+│   └── Program.cs
+├── SmartX.Client/
+│   └── Pages/
+│       ├── Home.razor
+│       ├── History.razor
+│       └── Mesh.razor
+├── SmartX.Shared/
+└── SmartX.Tests/
+    ├── AvlTreeTests.cs
+    ├── AvlTreePerformanceTests.cs
+    ├── HistoricalTelemetryTests.cs
+    ├── HistoricalTelemetryExtendedTests.cs
+    └── MeshNetworkServiceTests.cs
+```
+
+The exact mesh HTTP controller filename/routes were not supplied in the reviewed excerpts, so **verify them in the submitted source** rather than treating an invented endpoint as fact. All other named Part 3 classes above are grounded in the implementation reviewed during development.
+
+## Verified historical telemetry endpoints
+
+| Method | Route | Function |
+|---|---|---|
+| GET | `/api/history` | All indexed history |
+| GET | `/api/history/device/{deviceIdentifier}` | History for a device |
+| GET | `/api/history/range?startUtc=...&endUtc=...` | Inclusive UTC time range |
+| GET | `/api/history/recent?startUtc=...&endUtc=...&limit=50&device=...&metric=...` | Newest matching records, optional filters, bounded limit |
+
+Example (replace dates with a period that actually contains readings):
+
+```http
+GET /api/history/recent?startUtc=2026-11-12T14:00:00Z&endUtc=2026-11-12T16:00:00Z&limit=50&device=ESP32-ACT-07
+```
+
+A query with a historical date will return no rows after a later API restart unless the new seeded readings fall in that period. Do not treat a sample date as a permanent fixture.
+
+---
+
+# Part 3 Verification and Demonstration
+
+| Check | Expected observation | Evidence |
+|---|---|---|
+| Startup integration | All three module cards ACTIVE; `03 / 03` | Home page screenshot |
+| Telemetry | 24 initial sensors and 6,000 startup packets | Gateway metrics and API |
+| AVL insertion | Float/int/Boolean packets appear in history | History service and tests |
+| AVL range query | Inclusive interval returns matching records | History UI/API + tests |
+| Filter exclusion | Outside interval returns empty result | History UI screenshot |
+| Device/metric filter | Only matching rows returned | History UI screenshot |
+| BFS/DFS | Connectivity/traversal handles reachable and unreachable nodes | Graph tests / mesh page |
+| Prim MST | Highlighted low-total-weight spanning structure | Mesh UI and algorithm tests |
+| Dijkstra | Lowest-weight route, distinct from MST route when appropriate | Mesh UI and tests |
+| Failure/recovery | Graph results update when nodes/links change | Mesh UI demonstration |
+| Regression | Parts 1 and 2 remain accessible | Navigation and commands demonstration |
+| Automated tests | Full suite passes | Visual Studio Test Explorer |
+
+## Recommended final demo order
+
+1. Show project title, author and repository.
+2. Start API and client; show both running terminals or Visual Studio startup configuration.
+3. Show all three active cards and the gateway counts.
+4. Briefly demonstrate Part 1 Telemetry and Part 2 Commands/Undo to prove integration.
+5. Open Historical Telemetry; demonstrate inclusive/exclusive time ranges and device/metric filtering.
+6. Explain AVL balancing, duplicate timestamp handling, `GetRange` pruning and `GetRecent` reverse traversal using source code.
+7. Open Mesh; show weighted graph, BFS connectivity, Prim MST, Dijkstra route and a failure/recovery.
+8. Explain the difference between minimum spanning cost and shortest route.
+9. Show **146 passing tests**, the README and Git history.
+10. End with limitations and future improvements.
+
+---
+
+# Automated Tests and Evidence
+
+**Most recent verified development run:** **146 passed / 146 total, 0 failed, 0 skipped**, followed by a successful final build and a user-confirmed working dashboard and navigation. Test counts are a snapshot of the final development run; rerun tests against the submitted commit.
+
+The test project includes the following known test classes:
+
+| Test file | Main purpose |
+|---|---|
+| `AvlTreeTests.cs` | Insertion, ordering, duplicates, range behaviour and rotation cases |
+| `AvlTreePerformanceTests.cs` | Large ascending/reverse insert sequences, 10,000-reading history workloads, recent/range retrieval; diagnostic timing without fragile timing thresholds |
+| `HistoricalTelemetryTests.cs` | Historical service operations |
+| `HistoricalTelemetryExtendedTests.cs` | Additional history and filtering scenarios |
+| `MeshNetworkServiceTests.cs` | Graph traversal, MST, shortest routes and failure/recovery (22 test cases reported) |
+| `DeviceCommandServiceTests.cs` | Simulated command processing and Undo |
+| `DeviceCommandExtendedTests.cs` | Additional command scenarios |
+| `SensorRegistryExtendedTests.cs` | Registration and lookup |
+| `TelemetryAlertExtendedTests.cs` | Alerts and active-fault logic |
+| `TelemetryQueueTests.cs` | Standard and priority queue operations |
+| `TelemetryQueueExtendedTests.cs` | Extended queue behaviour |
+
+**Important:** the 146 count is the entire suite, **not 146 AVL tests**. The AVL performance tests exercise 10,000-element datasets but do not establish a guaranteed millisecond bound. No measured performance values are invented here.
+
+### Reproduce results
+
+```powershell
+dotnet test .\PROG7312.POE.Part1.sln --configuration Debug
+```
+
+For assessor evidence, capture a Test Explorer screenshot showing total, passed and failed counts, and (if requested) a terminal screenshot of the successful build. The latest developer-reported Test Explorer run displayed one warning; its origin was not investigated, so do not claim a warning-free run without checking.
+
+---
+
+# Changes and Improvements Across Parts
+
+| Phase | Delivered capability | Structures / techniques |
+|---|---|---|
+| **Part 1** | Sensor registration, telemetry ingestion, monitoring, alerts, attachments, recursive deployment validation | Generics, jagged arrays, collections, recursion, operator overloading |
+| **Part 2** | Asynchronous telemetry queues, device command execution and Undo, device lookup, unique faults, rule-based recommendations, ordered history | FIFO queue, priority queue, stack, dictionary, `HashSet`, `SortedDictionary` (historical Part 2 design) |
+| **Final Part 3** | AVL-backed historical time-range queries; graph-based mesh topology, connectivity and routing; third active home card | AVL Tree with rotations; BFS, DFS, Prim MST, Dijkstra; weighted graph; failure/recovery |
+
+**Specific Part 3 updates:**
+
+- Added `AvlTree<TKey,TValue>` with balancing rotations and duplicate-key values.
+- Connected `HistoricalTelemetryService` to the AVL Tree rather than relying on the earlier sorted-dictionary historical index.
+- Preserved the ingestion pipeline so new readings reach history and alert evaluation.
+- Exposed range/recent history operations through `HistoryController` and the existing History UI.
+- Added/expanded AVL and historical test coverage, including 10,000-record workloads.
+- Added mesh network model, topology initialisation, traversal, MST and shortest-route logic.
+- Added the Mesh page and network failure/recovery interactions.
+- Updated `Home.razor`: third card now **ACTIVE**, links to `/mesh`, and the summary shows **03 / 03**.
+- Confirmed successful build, full passing suite and all three home navigation paths.
+- Deliberately **did not modify** `MockTelemetrySeeder.cs` merely to spread timestamps, because its older sensor timestamps also support connectivity-alert simulation.
+
+## Project challenges, decisions and learning outcomes
+
+- **Preserving existing behaviour:** new structures were integrated behind existing services and controllers rather than rewriting stable Part 1/2 features.
+- **Duplicate timestamps:** multiple rapidly seeded packets can share a timestamp; a list per AVL node avoids losing records.
+- **Balancing correctness:** LL/RR/LR/RL rotations and large insertion patterns need direct unit tests rather than relying on the UI.
+- **Time-zone interpretation:** UTC filters and local display time can look inconsistent unless converted correctly.
+- **Graph optimisation goals:** minimum total network weight (MST) differs from minimum individual route cost (Dijkstra).
+- **Network failures:** graph connectivity and routing must respond to disabled nodes/links without corrupting the original topology.
+- **Regression safety:** 146 passing tests and the final dashboard check reduce risk, though they cannot prove every possible runtime scenario.
+
+---
+
+# Complexity, Trade-offs and Limitations
+
+| Decision | Benefit | Trade-off |
+|---|---|---|
+| AVL Tree instead of unsorted list | Efficient timestamp ordering and selective range traversal | Rotation logic and extra node metadata |
+| AVL Tree instead of earlier sorted dictionary | Explicitly demonstrates self-balancing tree architecture required by Part 3 | Requires custom implementation and tests |
+| Weighted graph | Expresses connectivity and routing cost clearly | Edge weights are simulated rather than measured radio metrics |
+| BFS/DFS | Straightforward connectivity and traversal | Not weighted-shortest-path optimisers |
+| Prim MST | Minimises total cost of a spanning network | Does not minimise every individual route |
+| Dijkstra | Finds lowest-weight individual route | Assumes non-negative edge weights |
+| In-memory state | Simple, fast, no database dependency for assessment | Data, commands and changes reset when the API restarts |
+| Startup mock seeding | Reproducible 24-device / 6,000-packet demo | Most timestamps are close together; no continuous sensor generator |
+
+## Technology recommendations and justification
+
+**Current choices:** .NET 10 and C# provide strong typing, generic data structures, asynchronous background services, dependency injection and a shared model library. ASP.NET Core Web API cleanly separates server algorithms from the browser UI. Blazor WebAssembly enables a unified C# client and server development workflow. MSTest and Visual Studio Test Explorer support repeatable regression verification. Git/GitHub provide change history and submission traceability.
+
+**Potential future improvements (not claimed as implemented):**
+
+1. **Persistent history** using PostgreSQL/SQL Server or a time-series database, with an appropriate timestamp index and retention policy; current AVL storage is volatile.
+2. **Live ESP32 transport** using MQTT and a broker such as Mosquitto/EMQX, with device authentication and TLS; current network is simulated.
+3. **Realistic routing metrics** from observed signal strength, energy use, packet loss and latency; current graph weights are illustrative.
+4. **Observability** with structured logging, health checks and metrics; useful for diagnosing background processing and disconnected nodes.
+5. **Authentication/authorisation** for administrative controls and encrypted attachment access before production deployment.
+6. **Automated CI** to build and run tests on pull requests, if not already configured on the final branch.
+
+These are recommendations, not features that the assessment version currently implements.
+
+## Lecturer feedback and iteration log
+
+The submitted material does not include the lecturer's exact feedback text or dates. **Do not fabricate feedback.** Complete the following table from actual feedback and the corresponding commits before submission:
+
+| Date / phase | Actual lecturer feedback | Change made | Evidence (commit / screenshot) |
+|---|---|---|---|
+| Part 1 review | [INSERT EXACT FEEDBACK] | [INSERT VERIFIED CHANGE] | [INSERT EVIDENCE] |
+| Part 2 review | [INSERT EXACT FEEDBACK] | [INSERT VERIFIED CHANGE] | [INSERT EVIDENCE] |
+| Part 3 review (if applicable) | [INSERT EXACT FEEDBACK OR N/A] | [INSERT VERIFIED CHANGE OR N/A] | [INSERT EVIDENCE] |
+
+---
+
+# Troubleshooting and Common Issues
+
+| Symptom | Likely cause | Fix |
+|---|---|---|
+| Client shows **Gateway Offline** | API not running / wrong API URL | Start `SmartX.Api` first; inspect launch profile and client `HttpClient` base URL |
+| Browser shows HTTPS certificate warning | Untrusted local development certificate | Run `dotnet dev-certs https --trust` and restart browser |
+| Client loads but requests fail | API/CORS/port mismatch | Confirm client `https://localhost:7292`, API `https://localhost:7113`, and the API CORS configuration |
+| `dotnet` not recognised | SDK missing or terminal PATH not refreshed | Install .NET 10 SDK; reopen PowerShell; run `dotnet --info` |
+| NuGet restore fails | Connectivity or package source problem | Check network/NuGet sources; rerun `dotnet restore` |
+| Port already in use | Another API/client instance running | Stop duplicate Visual Studio/PowerShell process or inspect launch settings |
+| 24 sensors / 6,000 packets appear again | API restarted and re-seeded | Expected for in-memory demo; restart resets prior changes |
+| History shows no results | UTC range excludes timestamps or filters too restrictive | Reset filters; use current startup time; account for UTC+2 when comparing display |
+| History timestamps look identical | Startup seeder creates packets rapidly | Expected; inspect date/device/metric queries or submit a new reading |
+| Newly submitted reading not visible immediately | `202 Accepted` means queued, not yet processed | Wait briefly, refresh history/telemetry and confirm API still runs |
+| Mesh route disappears | Node/link was simulated as failed, or destination unreachable | Restore nodes/links; rerun the relevant algorithm |
+| Prim MST differs from Dijkstra | Different optimisation objectives | MST minimises overall spanning cost; Dijkstra minimises individual route cost |
+| Mesh card does not navigate | Incorrect route or stale client build | Confirm `Home.razor` links to `/mesh` and `Mesh.razor` declares that route; rebuild |
+| Attachment upload fails | Missing key, unsupported type, oversized file or invalid sensor | Configure User Secrets; check supported extensions, 10 MB limit and sensor selection |
+| Test suite fails | Different code branch, build issue or shared test state | Restore/build; inspect failing assertion; rerun full suite |
+
+**If a feature seems broken:** first check whether both projects are running, the browser is on the client URL, and the selected date/device/route inputs match the currently seeded simulation. Avoid changing the seeder or algorithms until the failure is reproduced.
+
+---
+
+# Assessment and Submission Checklist
+
+## Final Part 3 rubric coverage
+
+| Area | Marks | Evidence / status |
+|---|---:|---|
+| AVL Tree and historical telemetry range queries | 30 | AVL source, history API/UI, unit and larger-workload tests |
+| Mesh graph, traversal and MST routing | 30 | Mesh source, graph page, BFS/DFS/Prim, Dijkstra extension, graph tests |
+| README and technical explanations | 10 | This document, algorithms, code examples, setup and user guide |
+| Project completion report | 10 | **Separate report still required if specified by the brief**; README contains supporting summary |
+| Technology recommendations | 5 | Recommendations section above |
+| Technology justification | 5 | .NET/C#/Blazor/API and testing rationale above |
+| Lecturer feedback incorporation | 5 | **Complete feedback table with genuine evidence** |
+| Main menu integration | 5 | `03 / 03` active; three working module links |
+| **Total** | **100** | Final marking determined by assessor |
+
+## Before submitting
+
+- [x] Final dashboard shows all three modules as active (developer-confirmed).
+- [x] Final solution builds successfully (developer-confirmed).
+- [x] Full suite passed 146/146 in latest reported run.
+- [x] All three dashboard links worked in latest manual verification.
+- [ ] Confirm the correct **final Part 3 branch** and GitHub URL (do not submit an older `part2/main` snapshot).
+- [ ] Push this updated README and verify Markdown tables, diagrams and code blocks render on GitHub.
+- [ ] Add Final Part 3 and Part 1 YouTube links above.
+- [ ] Record exact lecturer feedback and associated changes/commits.
+- [ ] Complete any separately required project completion PDF/report.
+- [ ] Verify required minimum commit count (25+ where specified) on the submitted history.
+- [ ] Verify no secrets, `EncryptedUploads`, `bin` or `obj` folders were committed.
+- [ ] Record final test screenshot, application screenshots and video evidence.
+- [ ] Verify any additional assessment-specific submission instructions and deadlines.
+
+---
+
+# Previous README - Parts 1 and 2
+
+> **Historical documentation preserved below.** The following is the earlier Part 2 README retained for completeness and traceability. Its descriptions of **Part 3 as “coming soon”**, **`02 / 03` active modules**, the **Part 2 `SortedDictionary` historical index**, **Part 2-specific commit counts/branch names**, and **Part 2 assessment status** describe the *previous submission*, not the current Final Part 3 application. For the current architecture, setup, user guide, AVL implementation, mesh graph and final verification, use the **Final Part 3 sections above**. The historical Part 2 video URL remains valid as supplied.
 
 ---
 
@@ -81,9 +638,9 @@ The Part 1 implementation focuses on the first Smart-X management pillar:
 
 The platform is organised into three pillars:
 
-- **Sensor Data Ingestion and Telemetry** — implemented in Part 1 and retained.
-- **Real-Time Command Stream and History** — implemented in Part 2.
-- **Network Topology and Mesh Routing** — reserved for the final POE; not represented as a completed Part 2 module.
+- **Sensor Data Ingestion and Telemetry** - implemented in Part 1 and retained.
+- **Real-Time Command Stream and History** - implemented in Part 2.
+- **Network Topology and Mesh Routing** - reserved for the final POE; not represented as a completed Part 2 module.
 
 ---
 
@@ -1061,7 +1618,7 @@ Postman can also be used for direct API testing.
 
 ---
 
-## Step 1 — Clone the Repository
+## Step 1 - Clone the Repository
 
 Clone the repository using Git:
 
@@ -1073,7 +1630,7 @@ Alternatively, clone the repository through Visual Studio or GitHub Desktop.
 
 ---
 
-## Step 2 — Open the Solution
+## Step 2 - Open the Solution
 
 Navigate to the cloned repository and open:
 
@@ -1085,7 +1642,7 @@ using Visual Studio 2026.
 
 ---
 
-## Step 3 — Restore Dependencies
+## Step 3 - Restore Dependencies
 
 Visual Studio should restore required NuGet packages automatically.
 
@@ -1097,7 +1654,7 @@ dotnet restore
 
 ---
 
-## Step 4 — Configure the Encryption Key
+## Step 4 - Configure the Encryption Key
 
 Navigate to:
 
@@ -1129,7 +1686,7 @@ Do not place the real key in `appsettings.json`.
 
 ---
 
-## Step 5 — Configure Startup Projects
+## Step 5 - Configure Startup Projects
 
 Both the API and frontend must run for the complete application.
 
@@ -1145,7 +1702,7 @@ In Visual Studio:
 
 ---
 
-## Step 6 — Build the Solution
+## Step 6 - Build the Solution
 
 From Visual Studio:
 
@@ -1845,7 +2402,7 @@ The following procedures provide a structured method for demonstrating the Part 
 
 They can be completed through the running application, with automated tests used to verify internal collection behaviour.
 
-## Test 1 — Main Menu and Navigation
+## Test 1 - Main Menu and Navigation
 
 **Objective:** Verify that Part 1 and Part 2 modules remain accessible and operational.
 
@@ -1868,7 +2425,7 @@ The application supports navigation between implemented modules without breaking
 
 The Network Topology and Mesh Routing module remains unavailable because it belongs to the final POE.
 
-## Test 2 — Standard FIFO Queue
+## Test 2 - Standard FIFO Queue
 
 **Objective:** Verify that ordinary telemetry is processed in first-in, first-out order.
 
@@ -1884,7 +2441,7 @@ The Network Topology and Mesh Routing module remains unavailable because it belo
 
 Ordinary telemetry packets retain FIFO processing order.
 
-## Test 3 — Critical Priority Queue
+## Test 3 - Critical Priority Queue
 
 **Objective:** Verify that critical telemetry receives higher processing priority than ordinary telemetry.
 
@@ -1902,7 +2459,7 @@ Ordinary telemetry packets retain FIFO processing order.
 
 Critical conditions are detected and prioritised by the processing implementation.
 
-## Test 4 — Manual Device Control
+## Test 4 - Manual Device Control
 
 **Objective:** Verify that simulated actuator commands are validated and executed correctly.
 
@@ -1924,7 +2481,7 @@ Valid confirmed commands update the simulated device state and are recorded in c
 
 Cancelled commands do not modify the state.
 
-## Test 5 — Stack-Based Undo
+## Test 5 - Stack-Based Undo
 
 **Objective:** Verify last-in, first-out reversal of manual override commands.
 
@@ -1943,7 +2500,7 @@ Cancelled commands do not modify the state.
 
 Commands are reversed in LIFO order.
 
-## Test 6 — Dictionary-Based Device Lookup
+## Test 6 - Dictionary-Based Device Lookup
 
 **Objective:** Verify that registered devices can be retrieved using unique identifiers.
 
@@ -1962,7 +2519,7 @@ Commands are reversed in LIFO order.
 
 Device identifiers uniquely identify registered devices, and dictionary-backed lookup returns the corresponding device.
 
-## Test 7 — Sorted Historical Telemetry
+## Test 7 - Sorted Historical Telemetry
 
 **Objective:** Verify timestamp-based historical retrieval and filtering.
 
@@ -1983,7 +2540,7 @@ Device identifiers uniquely identify registered devices, and dictionary-backed l
 
 Historical telemetry can be retrieved and filtered accurately using timestamp, device and metric criteria.
 
-## Test 8 — HashSet Fault Deduplication
+## Test 8 - HashSet Fault Deduplication
 
 **Objective:** Verify that repeated identical active faults do not create duplicate unique-fault entries.
 
@@ -2001,7 +2558,7 @@ Historical telemetry can be retrieved and filtered accurately using timestamp, d
 
 Repeated occurrences of the same active fault are not counted as separate unique fault identities.
 
-## Test 9 — Suggested Actions
+## Test 9 - Suggested Actions
 
 **Objective:** Verify that the application identifies operational patterns and provides relevant navigation.
 
@@ -2021,7 +2578,7 @@ Repeated occurrences of the same active fault are not counted as separate unique
 
 Recommendations identify qualifying operational conditions and direct operators to the relevant investigation interface.
 
-## Test 10 — Regression Testing
+## Test 10 - Regression Testing
 
 **Objective:** Verify that Part 2 additions have not broken Part 1 functionality.
 
@@ -2368,7 +2925,7 @@ The Part 2 implementation addresses five principal assessment categories.
 | Predictive Action and Recommendation Engine | 30 | Historical pattern detection, active fault analysis and contextual recommendations |
 | **Total** | **100** | |
 
-## Main Menu, Navigation and Active State — 30 Marks
+## Main Menu, Navigation and Active State - 30 Marks
 
 Smart-X provides a structured startup interface and integrated operational navigation.
 
@@ -2380,7 +2937,7 @@ Contextual navigation allows a suggested action to open the relevant investigati
 
 The Network Topology and Mesh Routing module remains reserved for the final POE.
 
-## Stacks, Queues and Priority Queues — 15 Marks
+## Stacks, Queues and Priority Queues - 15 Marks
 
 The Part 2 implementation demonstrates three distinct collection behaviours.
 
@@ -2398,7 +2955,7 @@ Manual override commands are recorded in a stack to support last-in, first-out U
 
 Each collection is associated with an operational requirement and can be tested through the application and automated tests.
 
-## Dictionaries and Sorted Dictionaries — 15 Marks
+## Dictionaries and Sorted Dictionaries - 15 Marks
 
 A dictionary provides key-based access to registered devices.
 
@@ -2411,7 +2968,7 @@ These structures support different access patterns:
 
 The historical workspace allows operators to filter readings by device, metric and UTC date/time range.
 
-## HashSet — 10 Marks
+## HashSet - 10 Marks
 
 A HashSet tracks unique active fault identities.
 
@@ -2419,7 +2976,7 @@ This prevents repeated detections of the same unresolved fault from being counte
 
 The distinction between historical alert events and active unique faults allows the application to retain diagnostic information without unnecessarily inflating the current fault count.
 
-## Predictive Action and Recommendation Engine — 30 Marks
+## Predictive Action and Recommendation Engine - 30 Marks
 
 Smart-X includes a rule-based recommendation engine that evaluates historical telemetry patterns and active operational faults.
 
@@ -2689,6 +3246,6 @@ The resulting architecture provides a foundation for the Network Topology and Me
 **Raghav Mahraj**  
 **Student Number:** ST10458336  
 **Module:** PROG7312  
-**Assessment:** Portfolio of Evidence — Part 2  
+**Assessment:** Portfolio of Evidence - Part 2  
 **Project:** Smart-X IoT Mesh Ecosystem  
 **Technology:** C# / .NET 10 / ASP.NET Core Web API / Blazor WebAssembly
