@@ -13,9 +13,9 @@
 
 | Assessment | YouTube demonstration |
 |---|---|
-| **Final POE - Part 3** | **[ADD FINAL PART 3 YOUTUBE VIDEO LINK]** |
+| **Final POE - Part 3** | https://youtu.be/HlAc0mg8cM4 |
 | **POE - Part 2** | https://www.youtube.com/watch?v=vk7PITxr740 |
-| **POE - Part 1** | **[ADD PART 1 YOUTUBE VIDEO LINK]** |
+| **POE - Part 1** | https://youtu.be/h0Ft0MrGIwk |
 
 > Watch videos at the highest available quality. Replace the two placeholders before submission. The Part 2 link is retained from the previous README.
 
