@@ -863,6 +863,7 @@
     }
 </style>
 
+
 @code {
     private sealed record ActionSuggestion(string Category, string Title, string Description);
 
@@ -975,6 +976,7 @@
             using var document = await response.Content.ReadFromJsonAsync<JsonDocument>();
             var moistureSamples = new List<MoistureSample>();
             var temperatureSamples = new List<MoistureSample>();
+
             if (document?.RootElement.ValueKind == JsonValueKind.Array)
             {
                 // Scan the full seven-day result; retain only readings relevant to the rules.
@@ -983,6 +985,7 @@
                     string device = JsonText(packet, "deviceIdentifier");
                     string metric = JsonText(packet, "metricName");
                     string value = JsonText(packet, "value");
+
                     if (string.IsNullOrWhiteSpace(device) ||
                         !double.TryParse(value, System.Globalization.NumberStyles.Float,
                             System.Globalization.CultureInfo.InvariantCulture, out double numericValue))
@@ -1007,12 +1010,15 @@
     }
 
     private readonly CancellationTokenSource telemetryCancellation = new();
+    private CancellationToken telemetryToken;
     private Task? telemetryPollTask;
+    private bool isDisposed;
     private bool telemetryLoading;
     private bool onlySelectedTelemetry = true;
     private string? telemetryError;
     private DateTime? telemetryCheckedAt;
     private List<TelemetryReading> telemetryReadings = new();
+
     private List<TelemetryReading> LatestMetricReadings =>
         VisibleTelemetry.GroupBy(r => (r.DeviceIdentifier, r.MetricName))
             .Select(g => g.OrderByDescending(r => r.TimestampUtc).First())
@@ -1083,15 +1089,28 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Capture the token before any asynchronous operation can yield.
+        telemetryToken = telemetryCancellation.Token;
+
         await LoadData();
+
+        // Navigation may have disposed this component while data was loading.
+        if (isDisposed || telemetryToken.IsCancellationRequested)
+            return;
+
         await RefreshTelemetry();
-        telemetryPollTask = PollTelemetryAsync(telemetryCancellation.Token);
+
+        // Do not start polling after the page has been disposed.
+        if (isDisposed || telemetryToken.IsCancellationRequested)
+            return;
+
+        telemetryPollTask = PollTelemetryAsync(telemetryToken);
     }
 
     // Reload gateway data without resetting filters.
     private async Task LoadData()
     {
-        if (busy || stateLoading)
+        if (isDisposed || busy || stateLoading)
             return;
 
         loading = true;
@@ -1113,11 +1132,17 @@
                 await Http.GetFromJsonAsync<ActiveFaultResponse>(
                     "api/alerts/active");
 
+            if (isDisposed)
+                return;
+
             sensors = loadedSensors;
             commands = loadedCommands;
             activeFaults = faultResponse?.Faults ?? new();
 
             await LoadHistoricalPatterns();
+
+            if (isDisposed)
+                return;
 
             if (selectedDevice is null ||
                 !sensors.Any(s => string.Equals(
@@ -1137,7 +1162,8 @@
         }
         catch (Exception ex)
         {
-            errorMessage = $"Unable to load workspace: {ex.Message}";
+            if (!isDisposed)
+                errorMessage = $"Unable to load workspace: {ex.Message}";
         }
         finally
         {
@@ -1148,7 +1174,7 @@
     // Auto-select only when exactly one device matches.
     private async Task AutoSelectSingleMatch()
     {
-        if (busy || stateLoading || showConfirmation)
+        if (isDisposed || busy || stateLoading || showConfirmation)
             return;
 
         var matches = FilteredSensors.Take(2).ToList();
@@ -1164,7 +1190,7 @@
     // Explicit device selection always takes precedence.
     private async Task SelectDevice(string deviceIdentifier)
     {
-        if (busy || stateLoading || showConfirmation)
+        if (isDisposed || busy || stateLoading || showConfirmation)
             return;
 
         if (!sensors.Any(s => string.Equals(
@@ -1185,6 +1211,9 @@
     // Load all three actuator states from the API for the selected device.
     private async Task LoadSelectedStates()
     {
+        if (isDisposed)
+            return;
+
         int version = ++selectionVersion;
         string? deviceIdentifier = selectedDevice;
 
@@ -1210,6 +1239,9 @@
             var valve = await Http.GetFromJsonAsync<ActuatorStateResponse>(
                 $"api/commands/state/{device}/Valve");
 
+            if (isDisposed)
+                return;
+
             if (pump is null || relay is null || valve is null)
                 throw new InvalidOperationException(
                     "The API returned an incomplete device state.");
@@ -1226,7 +1258,7 @@
         }
         catch (Exception ex)
         {
-            if (version == selectionVersion)
+            if (!isDisposed && version == selectionVersion)
                 actionError = $"Could not load device states: {ex.Message}";
         }
         finally
@@ -1239,7 +1271,7 @@
     // Prepare a command without executing it immediately.
     private void RequestCommand(string commandType, bool newState)
     {
-        if (busy || stateLoading || !statesAvailable ||
+        if (isDisposed || busy || stateLoading || !statesAvailable ||
             SelectedSensor is null || !SelectedSensor.IsActive)
             return;
 
@@ -1272,7 +1304,7 @@
 
     private void RequestUndo()
     {
-        if (busy || stateLoading || commands.Count == 0)
+        if (isDisposed || busy || stateLoading || commands.Count == 0)
             return;
 
         pendingUndo = true;
@@ -1292,7 +1324,7 @@
 
     private async Task ConfirmAction()
     {
-        if (busy || !showConfirmation)
+        if (isDisposed || busy || !showConfirmation)
             return;
 
         if (pendingUndo)
@@ -1304,7 +1336,7 @@
     // Execute the exact device and state shown in the dialog.
     private async Task ExecuteCommand()
     {
-        if (busy || !statesAvailable)
+        if (isDisposed || busy || !statesAvailable)
             return;
 
         var sensor = sensors.FirstOrDefault(s =>
@@ -1342,6 +1374,9 @@
                 return;
             }
 
+            if (isDisposed)
+                return;
+
             showConfirmation = false;
 
             successMessage =
@@ -1353,10 +1388,13 @@
         }
         catch (Exception ex)
         {
-            showConfirmation = false;
-            actionError =
-                $"Command could not be confirmed: {ex.Message}. " +
-                "Refresh before retrying to avoid duplicate commands.";
+            if (!isDisposed)
+            {
+                showConfirmation = false;
+                actionError =
+                    $"Command could not be confirmed: {ex.Message}. " +
+                    "Refresh before retrying to avoid duplicate commands.";
+            }
         }
         finally
         {
@@ -1367,7 +1405,7 @@
     // Undo the newest command in the backend LIFO stack.
     private async Task UndoLast()
     {
-        if (busy || commands.Count == 0)
+        if (isDisposed || busy || commands.Count == 0)
             return;
 
         busy = true;
@@ -1386,6 +1424,9 @@
                 return;
             }
 
+            if (isDisposed)
+                return;
+
             showConfirmation = false;
             successMessage = "Latest command successfully undone.";
 
@@ -1393,10 +1434,13 @@
         }
         catch (Exception ex)
         {
-            showConfirmation = false;
-            actionError =
-                $"Undo could not be confirmed: {ex.Message}. " +
-                "Refresh the workspace before retrying.";
+            if (!isDisposed)
+            {
+                showConfirmation = false;
+                actionError =
+                    $"Undo could not be confirmed: {ex.Message}. " +
+                    "Refresh the workspace before retrying.";
+            }
         }
         finally
         {
@@ -1407,11 +1451,19 @@
     // Refresh the history and selected device after a successful action.
     private async Task RefreshAfterAction()
     {
+        if (isDisposed)
+            return;
+
         try
         {
-            commands =
+            var updatedCommands =
                 await Http.GetFromJsonAsync<List<CommandRecord>>(
                     "api/commands/history") ?? new();
+
+            if (isDisposed)
+                return;
+
+            commands = updatedCommands;
 
             await LoadSelectedStates();
 
@@ -1420,11 +1472,14 @@
         }
         catch (Exception ex)
         {
-            statesAvailable = false;
-            successMessage = null;
-            actionError =
-                $"Action was accepted, but the updated state " +
-                $"could not be verified: {ex.Message}";
+            if (!isDisposed)
+            {
+                statesAvailable = false;
+                successMessage = null;
+                actionError =
+                    $"Action was accepted, but the updated state " +
+                    $"could not be verified: {ex.Message}";
+            }
         }
     }
 
@@ -1434,39 +1489,58 @@
         try
         {
             using var timer = new PeriodicTimer(TimeSpan.FromSeconds(5));
-            while (await timer.WaitForNextTickAsync(token))
+
+            while (!isDisposed && await timer.WaitForNextTickAsync(token))
             {
+                if (isDisposed || token.IsCancellationRequested)
+                    break;
+
                 await InvokeAsync(RefreshTelemetry);
             }
         }
-        catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (token.IsCancellationRequested)
+        {
+            // Normal shutdown when navigating away.
+        }
         catch (Exception ex)
         {
-            telemetryError = $"Automatic refresh stopped: {ex.Message}";
-            await InvokeAsync(StateHasChanged);
+            if (!isDisposed && !token.IsCancellationRequested)
+            {
+                telemetryError = $"Automatic refresh stopped: {ex.Message}";
+                await InvokeAsync(StateHasChanged);
+            }
         }
     }
 
     private async Task RefreshTelemetry()
     {
-        if (telemetryLoading || telemetryCancellation.IsCancellationRequested)
+        // The token is captured during initialization and remains safe to inspect.
+        if (isDisposed || telemetryLoading || telemetryToken.IsCancellationRequested)
             return;
 
         telemetryLoading = true;
+
         try
         {
             var all = new List<TelemetryReading>();
+
             foreach (string type in new[] { "float", "integer", "boolean" })
             {
-                using var response = await Http.GetAsync($"api/telemetry/{type}?take=20",
-                    telemetryCancellation.Token);
+                telemetryToken.ThrowIfCancellationRequested();
+
+                using var response = await Http.GetAsync(
+                    $"api/telemetry/{type}?take=20",
+                    telemetryToken);
+
                 response.EnsureSuccessStatusCode();
+
                 using var json = await JsonDocument.ParseAsync(
-                    await response.Content.ReadAsStreamAsync(telemetryCancellation.Token),
-                    cancellationToken: telemetryCancellation.Token);
+                    await response.Content.ReadAsStreamAsync(telemetryToken),
+                    cancellationToken: telemetryToken);
 
                 if (json.RootElement.ValueKind != JsonValueKind.Array)
-                    throw new InvalidOperationException("Unexpected telemetry response format.");
+                    throw new InvalidOperationException(
+                        "Unexpected telemetry response format.");
 
                 foreach (var packet in json.RootElement.EnumerateArray())
                 {
@@ -1475,30 +1549,44 @@
                     string value = JsonText(packet, "value");
                     string unit = JsonText(packet, "unit");
                     string timestamp = JsonText(packet, "timestampUtc");
+
                     if (!DateTime.TryParse(timestamp, null,
                         System.Globalization.DateTimeStyles.RoundtripKind, out var recorded))
                         continue;
 
-                    all.Add(new TelemetryReading(device, metric,
+                    all.Add(new TelemetryReading(
+                        device,
+                        metric,
                         FormatTelemetryValue(metric, value, unit, type),
-                        type, recorded));
+                        type,
+                        recorded));
                 }
             }
 
+            // Do not update a page that was removed during an API request.
+            if (isDisposed || telemetryToken.IsCancellationRequested)
+                return;
+
             telemetryReadings = all.OrderByDescending(r => r.TimestampUtc)
                 .Take(60).ToList();
+
             telemetryCheckedAt = DateTime.UtcNow;
             telemetryError = null;
         }
-        catch (OperationCanceledException) when (telemetryCancellation.IsCancellationRequested) { }
+        catch (OperationCanceledException) when (telemetryToken.IsCancellationRequested)
+        {
+            // Expected when leaving the Commands page.
+        }
         catch (Exception ex)
         {
-            telemetryError = $"Telemetry refresh failed: {ex.Message}";
+            if (!isDisposed)
+                telemetryError = $"Telemetry refresh failed: {ex.Message}";
         }
         finally
         {
             telemetryLoading = false;
-            if (!telemetryCancellation.IsCancellationRequested)
+
+            if (!isDisposed && !telemetryToken.IsCancellationRequested)
                 await InvokeAsync(StateHasChanged);
         }
     }
@@ -1510,8 +1598,11 @@
             : (state ? "ON" : "OFF");
 
     // Translate boolean sensor readings into clear operational states.
-    private static string FormatTelemetryValue(string metric, string value,
-        string unit, string type)
+    private static string FormatTelemetryValue(
+        string metric,
+        string value,
+        string unit,
+        string type)
     {
         if (type.Equals("boolean", StringComparison.OrdinalIgnoreCase) &&
             bool.TryParse(value, out bool enabled))
@@ -1525,32 +1616,60 @@
             };
         }
 
-        return string.IsNullOrWhiteSpace(unit) ? value : $"{value} {unit}";
+        return string.IsNullOrWhiteSpace(unit)
+            ? value
+            : $"{value} {unit}";
     }
 
     private static string JsonText(JsonElement obj, string property)
     {
         foreach (var item in obj.EnumerateObject())
         {
-            if (string.Equals(item.Name, property, StringComparison.OrdinalIgnoreCase))
-                return item.Value.ValueKind == JsonValueKind.Null ? "" : item.Value.ToString();
+            if (string.Equals(
+                item.Name,
+                property,
+                StringComparison.OrdinalIgnoreCase))
+            {
+                return item.Value.ValueKind == JsonValueKind.Null
+                    ? ""
+                    : item.Value.ToString();
+            }
         }
+
         return "";
     }
 
     public async ValueTask DisposeAsync()
     {
+        if (isDisposed)
+            return;
+
+        // Mark disposed before cancelling outstanding operations.
+        isDisposed = true;
+
         await telemetryCancellation.CancelAsync();
+
         if (telemetryPollTask is not null)
         {
-            try { await telemetryPollTask; }
-            catch (OperationCanceledException) { }
+            try
+            {
+                await telemetryPollTask;
+            }
+            catch (OperationCanceledException)
+            {
+                // Expected when stopping the timer.
+            }
         }
+
         telemetryCancellation.Dispose();
     }
 
-    private sealed record TelemetryReading(string DeviceIdentifier, string MetricName,
-        string DisplayValue, string DataType, DateTime TimestampUtc);
+    private sealed record TelemetryReading(
+        string DeviceIdentifier,
+        string MetricName,
+        string DisplayValue,
+        string DataType,
+        DateTime TimestampUtc);
 
     private sealed class CommandRequest
     {
