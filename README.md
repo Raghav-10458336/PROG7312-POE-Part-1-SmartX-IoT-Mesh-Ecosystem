@@ -17,7 +17,7 @@
 | **POE - Part 2** | https://www.youtube.com/watch?v=vk7PITxr740 |
 | **POE - Part 1** | https://youtu.be/h0Ft0MrGIwk |
 
-> Watch videos at the highest available quality. Replace the two placeholders before submission. The Part 2 link is retained from the previous README.
+> Watch videos at the highest available quality. 
 
 ---
 
